@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Simulation | Beam Reactions Lab</title><link rel="stylesheet" href="style.css">
+<title>Simulation | Beam Reactions Lab</title><link rel="stylesheet" href="css/style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script></head>
 <body><div class="wrap">
 <nav class="glass"><b>Beam Reactions Lab</b><a href="index.html">Home</a><a href="theory.html">Theory</a><a class="on" href="simulation.html">Simulation</a></nav>
@@ -13,9 +13,9 @@
 <button class="pri" id="add">Add weight</button><button id="reset">Reset experiment</button>
 <div id="msg" role="status"></div>
 <h2 style="margin-top:14px">Live values</h2>
-<div class="stat"><span>Beam length L</span><b>1.00 m</b></div>
-<div class="stat"><span>Self-weight</span><b>4.00 N</b></div>
-<div class="stat"><span>W<sub>max</sub></span><b>50 N</b></div>
+<div class="stat"><span>Beam length L</span><b id="cfgL">1.00 m</b></div>
+<div class="stat"><span>Self-weight</span><b id="cfgSelfWeight">4.00 N</b></div>
+<div class="stat"><span>W<sub>max</sub></span><b id="cfgWMax">50 N</b></div>
 <div class="stat"><span>Total added load</span><b id="tot">0.00 N</b></div>
 <div class="stat"><span>Max bending moment</span><b id="mm">0.00 N·m</b></div>
 <div class="stat"><span>Bending stress</span><b id="sg">0.0 MPa</b></div>
@@ -31,4 +31,4 @@
 <section class="glass" id="concl"><h2>Conclusion</h2><div id="ctext"></div>
 <p class="muted"><b>Theory:</b> A body is in static equilibrium when ΣF = 0 and ΣM = 0. Small percentage errors come from experimental factors such as balance resolution, support friction and measurement of x, but the analytical values confirm the moment law of equilibrium.</p></section>
 </div></div></div>
-<script src="app.js"></script></body></html>
+<script type="module" src="js/main.js"></script></body></html>
