@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Simulation | Beam Reactions Lab</title><link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script></head>
+<body><div class="wrap">
+<nav class="glass"><b>Beam Reactions Lab</b><a href="index.html">Home</a><a href="theory.html">Theory</a><a class="on" href="simulation.html">Simulation</a></nav>
+<div class="layout">
+<aside class="glass"><h2>Control panel</h2>
+<label for="type">Beam type</label>
+<select id="type"><option value="simple">Simple beam</option><option value="compound">Compound beam</option></select>
+<label for="W">Weight W (N)</label><input id="W" type="number" min="0.5" max="50" step="0.5" value="10">
+<label for="X">Distance x from left support (m)</label><input id="X" type="number" min="0.05" max="0.95" step="0.05" value="0.5">
+<button class="pri" id="add">Add weight</button><button id="reset">Reset experiment</button>
+<div id="msg" role="status"></div>
+<h2 style="margin-top:14px">Live values</h2>
+<div class="stat"><span>Beam length L</span><b>1.00 m</b></div>
+<div class="stat"><span>Self-weight</span><b>4.00 N</b></div>
+<div class="stat"><span>W<sub>max</sub></span><b>50 N</b></div>
+<div class="stat"><span>Total added load</span><b id="tot">0.00 N</b></div>
+<div class="stat"><span>Max bending moment</span><b id="mm">0.00 N·m</b></div>
+<div class="stat"><span>Bending stress</span><b id="sg">0.0 MPa</b></div>
+<div class="bar"><div id="sbar"></div></div>
+<button class="pri" id="pdf">Download experiment report as PDF</button>
+</aside>
+<div id="report">
+<section class="glass"><h2 id="ctitle">Simulation: simple beam</h2>
+<div class="cw"><canvas id="cv" width="900" height="330"></canvas><div id="alert" role="alert">Structural failure</div></div></section>
+<section class="glass"><h2>Observation table</h2><div class="tw"><table>
+<thead><tr><th>S.No</th><th>Load W (N)</th><th>x (m)</th><th>R_initial (N)</th><th>R_final (N)</th><th>R_exp (N)</th><th>R_analytical (N)</th><th>Error (%)</th></tr></thead>
+<tbody id="tb"></tbody></table></div></section>
+<section class="glass" id="concl"><h2>Conclusion</h2><div id="ctext"></div>
+<p class="muted"><b>Theory:</b> A body is in static equilibrium when ΣF = 0 and ΣM = 0. Small percentage errors come from experimental factors such as balance resolution, support friction and measurement of x, but the analytical values confirm the moment law of equilibrium.</p></section>
+</div></div></div>
+<script src="app.js"></script></body></html>
