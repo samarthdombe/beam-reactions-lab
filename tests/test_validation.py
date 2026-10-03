@@ -1,6 +1,7 @@
 """Every validation rule must answer HTTP 400 with a JSON {"error": ...} body."""
 import json
 import unittest
+from unittest import mock
 
 from beamlab import service
 
@@ -81,6 +82,12 @@ class ValidationTest(unittest.TestCase):
         self.assertEqual(service.body_length('12'), 12)
         self.assertIsNone(service.body_length('abc'))
         self.assertIsNone(service.body_length('-5'))
+
+    def test_unexpected_failure_returns_500_without_leaking_details(self):
+        with mock.patch.object(service, 'analyze', side_effect=RuntimeError('secret detail')):
+            status, payload = service.process(body(load()))
+        self.assertEqual(status, 500)
+        self.assertEqual(payload, {'error': 'Internal error'})
 
     def test_boundary_values_are_accepted(self):
         edge = [load(W=0.5, x=0.05), load(W=50, x=0.95), load(W=50.0, x=0.05)]

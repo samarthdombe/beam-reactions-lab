@@ -116,7 +116,7 @@ export async function addLoad({ noise = randomNoise } = {}) {
     refresh();
   } catch (e) {
     if (id !== state.requestId) return;
-    msg(e instanceof ApiError && e.status < 500 ? e.message : BACKEND_MESSAGE);
+    msg(e instanceof ApiError && e.status === 400 ? e.message : BACKEND_MESSAGE); // 400: the server explains what is wrong
   } finally {
     if (id === state.requestId) state.busy = false;
   }

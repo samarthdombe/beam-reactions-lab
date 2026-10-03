@@ -1,0 +1,14 @@
+# Project metadata only. The project has no runtime or dev dependencies, and nothing
+# here is needed to run it; see README.md.
+[project]
+name = "beam-reactions-lab"
+version = "0.1.0"
+description = "Browser lab simulation of support reactions for a simple and a compound beam, with a stdlib-only Python backend."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+authors = [{ name = "advaetuc" }]
+keywords = ["statics", "beam", "education", "simulation"]
+
+[project.urls]
+Repository = "https://github.com/advaetuc/beam-reactions-lab"

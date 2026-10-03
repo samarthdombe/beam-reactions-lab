@@ -1,0 +1,8 @@
+{
+  "outputDirectory": "public",
+  "functions": {
+    "api/analyze.py": {
+      "includeFiles": "beamlab/**"
+    }
+  }
+}
