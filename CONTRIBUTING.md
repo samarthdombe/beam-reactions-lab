@@ -2,6 +2,7 @@
 
 Thanks for helping. This project is deliberately small: **Python standard library only
 (3.10+), plain ES modules, no bundler, no framework, no build step.** Please keep it that way.
+current venv runs on 3.12.9
 
 ## Setup
 
