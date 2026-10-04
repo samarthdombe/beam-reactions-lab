@@ -30,13 +30,36 @@ def _number_in_range(value, label, low, high, unit):
     return float(value)
 
 
+BEAM_KEYS = ('length', 'selfWeight')
+
+
+def _validate_beam(raw):
+    """Optional ``beam`` object: {"length": m, "selfWeight": N}. Omitted fields use the defaults."""
+    if raw is None:
+        return config.Beam()
+    if not isinstance(raw, dict):
+        raise ValidationError('beam must be an object with length and/or selfWeight')
+    unknown = sorted(set(raw) - set(BEAM_KEYS))
+    if unknown:
+        raise ValidationError(f"beam has unknown field '{unknown[0]}' (allowed: length, selfWeight)")
+    length = config.DEFAULT_LENGTH
+    self_weight = config.DEFAULT_SELF_WEIGHT
+    if 'length' in raw:
+        length = _number_in_range(raw['length'], 'beam.length', config.L_MIN, config.L_MAX, 'm')
+    if 'selfWeight' in raw:
+        self_weight = _number_in_range(raw['selfWeight'], 'beam.selfWeight',
+                                       config.SELF_WEIGHT_MIN, config.SELF_WEIGHT_MAX, 'N')
+    return config.Beam(length=length, self_weight=self_weight)
+
+
 def validate(body):
-    """Check a parsed JSON body; return ``(beam_type, [(W, x), ...])`` or raise ValidationError."""
+    """Check a parsed JSON body; return ``(beam_type, [(W, x), ...], Beam)`` or raise ValidationError."""
     if not isinstance(body, dict):
         raise ValidationError('Request body must be a JSON object')
     beam_type = body.get('type', 'simple')
     if not isinstance(beam_type, str) or beam_type not in BEAM_TYPES:
         raise ValidationError("type must be 'simple' or 'compound'")
+    beam = _validate_beam(body.get('beam'))
     raw_loads = body.get('loads', [])
     if not isinstance(raw_loads, list):
         raise ValidationError('loads must be a list')
@@ -50,32 +73,32 @@ def validate(body):
             if key not in item:
                 raise ValidationError(f'loads[{i}].{key} is required')
         w = _number_in_range(item['W'], f'loads[{i}].W', config.W_MIN, config.W_MAX, 'N')
-        x = _number_in_range(item['x'], f'loads[{i}].x', config.X_MIN, config.X_MAX, 'm')
+        x = _number_in_range(item['x'], f'loads[{i}].x', beam.x_min, beam.x_max, 'm')
         loads.append((w, x))
-    return beam_type, loads
+    return beam_type, loads, beam
 
 
 # --- Analysis --------------------------------------------------------------
 
-def analyze(beam_type, added):
-    """Analyse a beam under its self-weight plus the ``added`` (W, x) loads."""
-    own = self_loads(beam_type)
+def analyze(beam_type, added, beam=config.Beam()):
+    """Analyse ``beam`` under its self-weight plus the ``added`` (W, x) loads."""
+    own = self_loads(beam_type, beam)
     all_loads = own + added
-    supports, balance, xb = reactions(beam_type, all_loads)
+    supports, balance, xb = reactions(beam_type, all_loads, beam)
     n = config.N_POINTS
-    xs = [i * config.BEAM_LENGTH / n for i in range(n + 1)]
+    xs = [i * beam.length / n for i in range(n + 1)]
     moments = bending_moment(supports, all_loads, xs)
-    defl = deflection(moments, supports)
+    defl = deflection(moments, supports, beam)
     peak = max(abs(m) for m in moments)
-    x_peak = xs[[abs(m) for m in moments].index(peak)] if peak else config.BEAM_LENGTH / 2
+    x_peak = xs[[abs(m) for m in moments].index(peak)] if peak else beam.length / 2
     sigma = 6 * peak / (config.SECTION_B * config.SECTION_H * config.SECTION_H)
     total = sum(w for w, _ in added)
     return {'sup': [{'x': s, 'r': r} for s, r in supports], 'xb': xb, 'bal': balance,
-            'init_bal': reactions(beam_type, own)[1],
-            'added_bal': reactions(beam_type, added)[1] if added else 0.0,
-            'M': peak, 'xm': x_peak, 'sigma': sigma, 'total': total, 'self_w': config.SELF_WEIGHT,
+            'init_bal': reactions(beam_type, own, beam)[1],
+            'added_bal': reactions(beam_type, added, beam)[1] if added else 0.0,
+            'M': peak, 'xm': x_peak, 'sigma': sigma, 'total': total, 'self_w': beam.self_weight,
             's': max(sigma / config.ULTIMATE_STRESS, total / config.W_MAX), 'defl': defl,
-            'config': config.public_config()}
+            'config': config.public_config(beam)}
 
 
 # --- Request pipeline ------------------------------------------------------
@@ -83,10 +106,10 @@ def analyze(beam_type, added):
 def handle(body):
     """Validate and analyse a parsed body. Returns ``(http_status, payload_dict)``."""
     try:
-        beam_type, loads = validate(body)
+        beam_type, loads, beam = validate(body)
     except ValidationError as err:
         return 400, {'error': str(err)}
-    return 200, analyze(beam_type, loads)
+    return 200, analyze(beam_type, loads, beam)
 
 
 def body_length(header_value):

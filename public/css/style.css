@@ -16,7 +16,7 @@ button:hover,.btn:hover{background:#eaf2ff}button:focus-visible,input:focus-visi
 .stat{display:flex;justify-content:space-between;font-size:.9rem;padding:3px 0}.stat b{font-variant-numeric:tabular-nums}
 .bar{height:10px;border-radius:6px;background:#dbe6f5;overflow:hidden;margin-top:8px}#sbar{height:100%;width:0;background:linear-gradient(90deg,#34d399,#f59e0b,#ef4444);transition:width .3s}
 #msg{min-height:1.3em;margin-top:8px;font-size:.85rem;color:#b91c1c}
-.cw{position:relative}canvas{width:100%;display:block;border-radius:12px;background:linear-gradient(#f8fbff,#e9f1fb)}
+.cw{position:relative}canvas{width:100%;display:block;touch-action:pan-y;border-radius:12px;background:linear-gradient(#f8fbff,#e9f1fb)}
 #alert{display:none;position:absolute;left:50%;top:14px;transform:translateX(-50%);padding:10px 22px;border-radius:12px;background:#dc2626;color:#fff;font-weight:700;box-shadow:0 6px 20px rgba(220,38,38,.35)}
 .tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}
 th,td{padding:8px 10px;text-align:right;border-bottom:1px solid #d5e1f2}th{background:#e6effb;font-weight:600;color:#0f3a5f}th:first-child,td:first-child{text-align:center}

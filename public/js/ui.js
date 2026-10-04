@@ -1,6 +1,6 @@
 // DOM panels (live values, table, conclusion), config consumer, and the Add / Reset flows.
 import { analyze, ApiError } from './api.js';
-import { MEAN_ERROR_LIMIT, PERCENT } from './constants.js';
+import { MEAN_ERROR_LIMIT, PERCENT, SNAP_TOLERANCE, X_RESOLUTION } from './constants.js';
 import { animateFailure, draw, prepareFailure } from './render.js';
 import { buildRow, clearExperiment, randomNoise, state } from './state.js';
 
@@ -11,6 +11,11 @@ export const BACKEND_MESSAGE =
 
 export function msg(text) {
   $('msg').textContent = text || '';
+}
+
+/** A 400 carries the server's own explanation; anything else means the backend is not reachable. */
+function errorText(error) {
+  return error instanceof ApiError && error.status === 400 ? error.message : BACKEND_MESSAGE;
 }
 
 // ---- config consumer: physics constants from the server response ----
@@ -24,6 +29,48 @@ function applyConfig(config) {
   $('W').max = config.wMax;
   $('X').min = config.xMin;
   $('X').max = config.xMax;
+  $('beamL').min = config.lMin;
+  $('beamL').max = config.lMax;
+  $('beamL').value = config.L;
+  $('beamSW').min = config.selfWeightMin;
+  $('beamSW').max = config.selfWeightMax;
+  $('beamSW').value = config.selfWeight;
+}
+
+// ---- load-position handle (the x field and the draggable handle stay in sync) ----
+
+/** Snap limits: multiples of 1/X_RESOLUTION metres that lie inside the server's accepted range. */
+function snapLimits(config) {
+  return {
+    lo: Math.ceil(config.xMin * X_RESOLUTION - SNAP_TOLERANCE) / X_RESOLUTION,
+    hi: Math.floor(config.xMax * X_RESOLUTION + SNAP_TOLERANCE) / X_RESOLUTION,
+  };
+}
+
+/** Round x to the handle's resolution and keep it inside the accepted range. */
+function snapX(x) {
+  const { lo, hi } = snapLimits(state.config);
+  return Math.min(hi, Math.max(lo, Math.round(x * X_RESOLUTION) / X_RESOLUTION));
+}
+
+/** Move the handle and the x field to x (no redraw). */
+function placeHandle(x) {
+  state.pendingX = snapX(x);
+  $('X').value = state.pendingX.toFixed(2);
+}
+
+/** Move the handle (dragging) and redraw. */
+export function setPendingX(x) {
+  placeHandle(x);
+  draw();
+}
+
+/** The x field was edited by hand: move the handle to match, leaving what was typed alone. */
+export function syncHandleFromInput() {
+  const text = $('X').value;
+  if (text === '' || !Number.isFinite(+text)) return;
+  state.pendingX = +text;
+  draw();
 }
 
 /** Adopt a server analysis as the current one. */
@@ -31,6 +78,7 @@ function acceptAnalysis(analysis) {
   state.A = analysis;
   state.config = analysis.config;
   applyConfig(analysis.config);
+  if (state.pendingX === null) placeHandle(analysis.config.L / 2); // starts at the midpoint
 }
 
 // ---- panels ----
@@ -102,7 +150,7 @@ export async function addLoad({ noise = randomNoise } = {}) {
   state.busy = true;
   const id = ++state.requestId;
   try {
-    const analysis = await analyze(state.type, state.loads.concat({ W, x }));
+    const analysis = await analyze(state.type, state.loads.concat({ W, x }), state.beam);
     if (id !== state.requestId) return; // superseded by a Reset or beam-type change: drop the stale result
     state.loads.push({ W, x });
     acceptAnalysis(analysis);
@@ -116,7 +164,7 @@ export async function addLoad({ noise = randomNoise } = {}) {
     refresh();
   } catch (e) {
     if (id !== state.requestId) return;
-    msg(e instanceof ApiError && e.status === 400 ? e.message : BACKEND_MESSAGE); // 400: the server explains what is wrong
+    msg(errorText(e));
   } finally {
     if (id === state.requestId) state.busy = false;
   }
@@ -131,15 +179,45 @@ export async function resetExperiment() {
   msg();
   $('sbar').style.width = '0';
   try {
-    const analysis = await analyze(state.type, []);
+    const analysis = await analyze(state.type, [], state.beam);
     if (id !== state.requestId) return; // a newer request owns the screen now
     acceptAnalysis(analysis);
     refresh();
   } catch (e) {
     if (id !== state.requestId) return;
-    msg(BACKEND_MESSAGE);
+    msg(errorText(e));
     draw();
   }
+}
+
+/** The length or self-weight field changed: validate, then restart the experiment on the new beam. */
+export function changeBeam() {
+  const lengthText = $('beamL').value;
+  const weightText = $('beamSW').value;
+  const length = +lengthText;
+  const selfWeight = +weightText;
+  const c = state.config; // unknown until the first server response; the server validates too
+  if (c) {
+    const restore = () => {
+      $('beamL').value = c.L;
+      $('beamSW').value = c.selfWeight;
+    };
+    if (lengthText === '' || !(length >= c.lMin && length <= c.lMax)) {
+      restore();
+      return msg(`Enter a beam length between ${c.lMin} and ${c.lMax} m.`);
+    }
+    if (weightText === '' || !(selfWeight >= c.selfWeightMin && selfWeight <= c.selfWeightMax)) {
+      restore();
+      return msg(`Enter a self-weight between ${c.selfWeightMin} and ${c.selfWeightMax} N.`);
+    }
+    if (length === c.L && selfWeight === c.selfWeight) return msg();
+  }
+  state.beam = { length, selfWeight };
+  // Loads placed on the old beam may not fit the new one, so the experiment restarts
+  // with the handle back at the new midpoint.
+  state.pendingX = Math.round((length / 2) * X_RESOLUTION) / X_RESOLUTION;
+  $('X').value = state.pendingX.toFixed(2);
+  return resetExperiment();
 }
 
 export function changeBeamType(type) {

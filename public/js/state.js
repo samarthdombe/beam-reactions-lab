@@ -11,6 +11,8 @@ export const state = {
   failInfo: null,    // { W, x } of the load that broke the beam
   A: null,           // latest analysis from the server
   config: null,      // physics constants, taken from the latest server response
+  beam: null,        // { length, selfWeight } chosen by the user; null = server defaults
+  pendingX: null,    // x (m) where the next weight will go; moved by the handle or the x field
   busy: false,       // an Add request is in flight
   requestId: 0,      // id of the newest request; older responses are ignored
 };

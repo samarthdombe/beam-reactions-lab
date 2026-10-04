@@ -4,16 +4,16 @@ Known limitation (see docs/physics.md): for the compound beam the slope is kept
 continuous at the hinge and has a kink at roller B. Real behaviour is the reverse
 (the hinge rotates freely, B is continuous), so the compound shape is approximate.
 """
-from .config import BEAM_LENGTH, EI, N_POINTS
+from .config import EI, N_POINTS, Beam
 
 
-def deflection(moments, supports):
+def deflection(moments, supports, beam=Beam()):
     """Deflection (mm, downward positive) at N_POINTS + 1 stations.
 
     ``moments`` has N_POINTS + 1 values. The rigid-body part is removed
     piecewise between neighbouring supports so deflection is zero at every support.
     """
-    n, length = N_POINTS, BEAM_LENGTH
+    n, length = N_POINTS, beam.length
     theta, y = [0.0], [0.0]
     for i in range(1, n + 1):
         theta.append(theta[-1] + (moments[i] + moments[i - 1]) / 2 / EI * length / n)

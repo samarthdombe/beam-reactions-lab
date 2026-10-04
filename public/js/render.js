@@ -3,7 +3,7 @@ import { state } from './state.js';
 import {
   BEAM_HALF_DRIFT, BEAM_HALF_SPIN, BEAM_LEFT_PX, BEAM_PX, BEAM_THICKNESS, BEAM_TOP, BENCH_HEIGHT,
   CRACK_JITTER, CRACK_ONSET, CRACK_RANGE, DEFLECTION_SCALE, GRAIN_LINES, GRAIN_WAVE_FREQ, GRAVITY, GROUND_Y,
-  LOAD_BASE_HEIGHT, LOAD_HEIGHT_PER_N, LOAD_WIDTH, OFFSCREEN_MARGIN,
+  HANDLE_COLOR, HANDLE_HIT_PADDING, HANDLE_RADIUS, HANDLE_Y, LOAD_BASE_HEIGHT, LOAD_HEIGHT_PER_N, LOAD_WIDTH, OFFSCREEN_MARGIN,
 } from './constants.js';
 
 const canvas = document.getElementById('cv');
@@ -18,9 +18,75 @@ const sx = (x) => BEAM_LEFT_PX + (x / state.config.L) * BEAM_PX;
 /** Beam position in metres -> index into the server's deflection array. */
 const gridIndex = (x) => Math.round((x / state.config.L) * state.config.nPoints);
 
+/**
+ * Drawn sag in pixels for a computed deflection in mm. The picture is exaggerated, and
+ * deflection grows with L cubed, so dividing by L^3 keeps the drawn bending comparable
+ * for any beam length (a no-op at L = 1 m).
+ */
+const drawnDeflection = (mm) => (mm * DEFLECTION_SCALE[state.type]) / state.config.L ** 3;
+
 /** Drawn deflection (pixels) at a position in metres. */
-const deflectionAt = (x) =>
-  state.A ? state.A.defl[gridIndex(x)] * DEFLECTION_SCALE[state.type] : 0;
+const deflectionAt = (x) => (state.A ? drawnDeflection(state.A.defl[gridIndex(x)]) : 0);
+
+// ---- draggable load-position handle ----
+
+/** Keep a position inside the range the server accepts. */
+const clampX = (x) => Math.min(state.config.xMax, Math.max(state.config.xMin, x));
+
+/** Canvas x in pixels -> beam position in metres (the inverse of sx). */
+export const xFromCanvasX = (px) => ((px - BEAM_LEFT_PX) / BEAM_PX) * state.config.L;
+
+/** Pointer event -> canvas pixel coordinates (the canvas is scaled by CSS). */
+export function canvasPoint(event) {
+  const box = canvas.getBoundingClientRect();
+  return {
+    x: ((event.clientX - box.left) * canvas.width) / box.width,
+    y: ((event.clientY - box.top) * canvas.height) / box.height,
+  };
+}
+
+/** True if canvas point `p` is on (or just around) the handle, so it can be grabbed. */
+export function isOnHandle(p) {
+  if (!state.config || state.pendingX === null || state.broken) return false;
+  const distance = Math.hypot(p.x - sx(clampX(state.pendingX)), p.y - HANDLE_Y);
+  return distance <= HANDLE_RADIUS + HANDLE_HIT_PADDING;
+}
+
+/** The handle: a dashed guide down to the beam, a grip, and the x label. */
+function drawHandle() {
+  if (state.pendingX === null) return;
+  const x = clampX(state.pendingX);
+  const px = sx(x);
+  const beamY = BEAM_TOP + deflectionAt(x);
+  ctx.save();
+  ctx.strokeStyle = HANDLE_COLOR;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(px, HANDLE_Y + HANDLE_RADIUS);
+  ctx.lineTo(px, beamY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = HANDLE_COLOR;
+  ctx.beginPath();
+  ctx.arc(px, HANDLE_Y, HANDLE_RADIUS, 0, ARC_END);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  [-1, 1].forEach((side) => { // two small arrows: this handle moves left and right
+    ctx.beginPath();
+    ctx.moveTo(px + side * 3, HANDLE_Y - 4);
+    ctx.lineTo(px + side * 8, HANDLE_Y);
+    ctx.lineTo(px + side * 3, HANDLE_Y + 4);
+    ctx.closePath();
+    ctx.fill();
+  });
+  ctx.fillStyle = HANDLE_COLOR;
+  ctx.font = 'bold 12px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(`x = ${x.toFixed(2)} m`, px, HANDLE_Y - HANDLE_RADIUS - 6);
+  ctx.restore();
+}
 
 // ---- load blocks ----
 
@@ -154,7 +220,7 @@ export function draw() {
   });
 
   // beam body: top edge left->right, bottom edge right->left
-  const d = A.defl.map((v) => v * DEFLECTION_SCALE[state.type]);
+  const d = A.defl.map((mm) => drawnDeflection(mm));
   ctx.beginPath();
   d.forEach((v, i) => {
     if (i) ctx.lineTo(sx((i / n) * state.config.L), BEAM_TOP + v);
@@ -243,6 +309,8 @@ export function draw() {
   ctx.textBaseline = 'alphabetic';
   ctx.fillText('A (pin)', sx(0) - 16, GROUND_Y + 40);
   if (state.type === 'compound') ctx.fillText('hinge', sx(state.config.hx) - 14, BEAM_TOP - 10);
+
+  drawHandle();
 }
 
 // ---- failure effect ----

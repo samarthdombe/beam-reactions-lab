@@ -8,8 +8,10 @@
 <aside class="glass"><h2>Control panel</h2>
 <label for="type">Beam type</label>
 <select id="type"><option value="simple">Simple beam</option><option value="compound">Compound beam</option></select>
+<label for="beamL">Beam length L (m)</label><input id="beamL" type="number" step="0.05">
+<label for="beamSW">Beam self-weight (N)</label><input id="beamSW" type="number" step="0.5">
 <label for="W">Weight W (N)</label><input id="W" type="number" min="0.5" max="50" step="0.5" value="10">
-<label for="X">Distance x from left support (m)</label><input id="X" type="number" min="0.05" max="0.95" step="0.05" value="0.5">
+<label for="X">Distance x from left support (m)</label><input id="X" type="number" min="0.05" max="0.95" step="0.01" value="0.5">
 <button class="pri" id="add">Add weight</button><button id="reset">Reset experiment</button>
 <div id="msg" role="status"></div>
 <h2 style="margin-top:14px">Live values</h2>
@@ -24,7 +26,8 @@
 </aside>
 <div id="report">
 <section class="glass"><h2 id="ctitle">Simulation: simple beam</h2>
-<div class="cw"><canvas id="cv" width="900" height="330"></canvas><div id="alert" role="alert">Structural failure</div></div></section>
+<div class="cw"><canvas id="cv" width="900" height="330"></canvas><div id="alert" role="alert">Structural failure</div></div>
+<p class="muted">Drag the blue handle along the beam to choose where the next weight goes.</p></section>
 <section class="glass"><h2>Observation table</h2><div class="tw"><table>
 <thead><tr><th>S.No</th><th>Load W (N)</th><th>x (m)</th><th>R_initial (N)</th><th>R_final (N)</th><th>R_exp (N)</th><th>R_analytical (N)</th><th>Error (%)</th></tr></thead>
 <tbody id="tb"></tbody></table></div></section>

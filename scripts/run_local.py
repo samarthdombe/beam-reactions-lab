@@ -9,7 +9,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PUBLIC = os.path.join(ROOT, 'public')
-PORT = 8000
+PORT = 8040
 
 sys.path.insert(0, ROOT)
 from beamlab import service  # noqa: E402

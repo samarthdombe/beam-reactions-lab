@@ -10,11 +10,12 @@ export class ApiError extends Error {
   }
 }
 
-export async function analyze(type, loads) {
+/** `beam` is optional: { length, selfWeight }. Without it the server uses its defaults. */
+export async function analyze(type, loads, beam = null) {
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, loads }),
+    body: JSON.stringify(beam ? { type, loads, beam } : { type, loads }),
   });
   if (!response.ok) {
     let message = 'API ' + response.status;
