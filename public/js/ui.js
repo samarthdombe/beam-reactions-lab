@@ -39,18 +39,16 @@ function applyConfig(config) {
 
 // ---- load-position handle (the x field and the draggable handle stay in sync) ----
 
-/** Snap limits: multiples of 1/X_RESOLUTION metres that lie inside the server's accepted range. */
-function snapLimits(config) {
-  return {
-    lo: Math.ceil(config.xMin * X_RESOLUTION - SNAP_TOLERANCE) / X_RESOLUTION,
-    hi: Math.floor(config.xMax * X_RESOLUTION + SNAP_TOLERANCE) / X_RESOLUTION,
-  };
+/** Round x to a multiple of 1/X_RESOLUTION metres that lies inside the server's range [min, max]. */
+function snapWithin(x, min, max) {
+  const lo = Math.ceil(min * X_RESOLUTION - SNAP_TOLERANCE) / X_RESOLUTION;
+  const hi = Math.floor(max * X_RESOLUTION + SNAP_TOLERANCE) / X_RESOLUTION;
+  return Math.min(hi, Math.max(lo, Math.round(x * X_RESOLUTION) / X_RESOLUTION));
 }
 
-/** Round x to the handle's resolution and keep it inside the accepted range. */
+/** Snap a load position to the handle's resolution, inside the accepted range. */
 function snapX(x) {
-  const { lo, hi } = snapLimits(state.config);
-  return Math.min(hi, Math.max(lo, Math.round(x * X_RESOLUTION) / X_RESOLUTION));
+  return snapWithin(x, state.config.xMin, state.config.xMax);
 }
 
 /** Move the handle and the x field to x (no redraw). */
@@ -63,6 +61,33 @@ function placeHandle(x) {
 export function setPendingX(x) {
   placeHandle(x);
   draw();
+}
+
+// ---- middle support (roller B of the compound beam) ----
+
+/** Show roller B at x while it is being dragged (the server is asked only when it is released). */
+export function setBalancePreview(x) {
+  state.balancePreview = snapWithin(x, state.config.xbMin, state.config.xbMax);
+  draw();
+}
+
+/** The drag was a plain click, or was abandoned: put roller B back. */
+export function cancelBalancePreview() {
+  state.balancePreview = null;
+  draw();
+}
+
+/**
+ * Roller B was released at a new position. Readings taken with B somewhere else no longer
+ * apply, so the experiment restarts on the new layout.
+ */
+export function commitBalance() {
+  const x = state.balancePreview;
+  state.balancePreview = null;
+  if (x === null || Math.abs(x - state.config.xb) < SNAP_TOLERANCE) return draw();
+  const { length, selfWeight } = state.beam ?? { length: state.config.L, selfWeight: state.config.selfWeight };
+  state.beam = { length, selfWeight, balanceX: x };
+  return resetExperiment();
 }
 
 /** The x field was edited by hand: move the handle to match, leaving what was typed alone. */

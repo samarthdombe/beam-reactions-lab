@@ -39,7 +39,7 @@ class GoldenParityTest(unittest.TestCase):
         self.assertEqual(payload['config'], {
             'L': 1.0, 'hx': 0.6, 'xb': 0.4, 'selfWeight': 4.0, 'wMax': 50.0, 'nPoints': 100,
             'section': {'b': 0.02, 'h': 0.01}, 'E': 10e9, 'ultimateStress': 40e6,
-            'wMin': 0.5, 'xMin': 0.05, 'xMax': 0.95,
+            'wMin': 0.5, 'xMin': 0.05, 'xMax': 0.95, 'xbMin': 0.1, 'xbMax': 0.5,
             'lMin': 0.5, 'lMax': 2.0, 'selfWeightMin': 0.0, 'selfWeightMax': 20.0})
 
     def test_explicit_default_beam_matches_original_exactly(self):

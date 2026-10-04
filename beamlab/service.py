@@ -30,18 +30,22 @@ def _number_in_range(value, label, low, high, unit):
     return float(value)
 
 
-BEAM_KEYS = ('length', 'selfWeight')
+BEAM_KEYS = ('length', 'selfWeight', 'balanceX')
 
 
 def _validate_beam(raw):
-    """Optional ``beam`` object: {"length": m, "selfWeight": N}. Omitted fields use the defaults."""
+    """Optional ``beam`` object: {"length": m, "selfWeight": N, "balanceX": m}.
+
+    Omitted fields use the defaults. ``balanceX`` is the position of roller B on the compound
+    beam; it is accepted (and ignored) for the simple beam.
+    """
     if raw is None:
         return config.Beam()
     if not isinstance(raw, dict):
         raise ValidationError('beam must be an object with length and/or selfWeight')
     unknown = sorted(set(raw) - set(BEAM_KEYS))
     if unknown:
-        raise ValidationError(f"beam has unknown field '{unknown[0]}' (allowed: length, selfWeight)")
+        raise ValidationError(f"beam has unknown field '{unknown[0]}' (allowed: length, selfWeight, balanceX)")
     length = config.DEFAULT_LENGTH
     self_weight = config.DEFAULT_SELF_WEIGHT
     if 'length' in raw:
@@ -49,7 +53,12 @@ def _validate_beam(raw):
     if 'selfWeight' in raw:
         self_weight = _number_in_range(raw['selfWeight'], 'beam.selfWeight',
                                        config.SELF_WEIGHT_MIN, config.SELF_WEIGHT_MAX, 'N')
-    return config.Beam(length=length, self_weight=self_weight)
+    balance_position = None
+    if 'balanceX' in raw:
+        limits = config.Beam(length=length)
+        balance_position = _number_in_range(raw['balanceX'], 'beam.balanceX',
+                                            limits.balance_min, limits.balance_max, 'm')
+    return config.Beam(length=length, self_weight=self_weight, balance_position=balance_position)
 
 
 def validate(body):

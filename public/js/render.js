@@ -3,6 +3,7 @@ import { state } from './state.js';
 import {
   BEAM_HALF_DRIFT, BEAM_HALF_SPIN, BEAM_LEFT_PX, BEAM_PX, BEAM_THICKNESS, BEAM_TOP, BENCH_HEIGHT,
   CRACK_JITTER, CRACK_ONSET, CRACK_RANGE, DEFLECTION_SCALE, GRAIN_LINES, GRAIN_WAVE_FREQ, GRAVITY, GROUND_Y,
+  BALANCE_ARROW_OFFSET, BALANCE_HIT_BELOW, BALANCE_HIT_HALF_WIDTH,
   HANDLE_COLOR, HANDLE_HIT_PADDING, HANDLE_RADIUS, HANDLE_Y, LOAD_BASE_HEIGHT, LOAD_HEIGHT_PER_N, LOAD_WIDTH, OFFSCREEN_MARGIN,
 } from './constants.js';
 
@@ -50,6 +51,29 @@ export function isOnHandle(p) {
   if (!state.config || state.pendingX === null || state.broken) return false;
   const distance = Math.hypot(p.x - sx(clampX(state.pendingX)), p.y - HANDLE_Y);
   return distance <= HANDLE_RADIUS + HANDLE_HIT_PADDING;
+}
+
+/** Two small arrows either side of a support: it moves left and right. */
+function dragArrows(x, y) {
+  ctx.fillStyle = HANDLE_COLOR;
+  [-1, 1].forEach((side) => {
+    ctx.beginPath();
+    ctx.moveTo(x + side * (BALANCE_ARROW_OFFSET - 6), y - 5);
+    ctx.lineTo(x + side * (BALANCE_ARROW_OFFSET + 3), y);
+    ctx.lineTo(x + side * (BALANCE_ARROW_OFFSET - 6), y + 5);
+    ctx.closePath();
+    ctx.fill();
+  });
+}
+
+/** True if canvas point `p` is on the middle support (compound beam only), so it can be dragged. */
+export function isOnBalance(p) {
+  const a = state.A;
+  if (!state.config || !a || state.broken || state.type !== 'compound' || a.sup.length !== 3) return false;
+  const centre = sx(state.balancePreview !== null ? state.balancePreview : a.xb);
+  return Math.abs(p.x - centre) <= BALANCE_HIT_HALF_WIDTH
+    && p.y >= BEAM_TOP + BEAM_THICKNESS
+    && p.y <= GROUND_Y + BALANCE_HIT_BELOW;
 }
 
 /** The handle: a dashed guide down to the beam, a grip, and the x label. */
@@ -192,6 +216,7 @@ function support(x, kind) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText((state.reading ?? state.A.init_bal).toFixed(3) + ' N', x, GROUND_Y + 16);
+      if (state.type === 'compound') dragArrows(x, GROUND_Y + 16); // this support can be dragged
     }
   }
 }
@@ -215,8 +240,11 @@ export function draw() {
   const n = state.config.nPoints;
   const severity = Math.min(1, A.s); // 0 = unloaded, 1 = at failure
   A.sup.forEach((p, i) => {
-    const kind = i === 0 ? 'pin' : Math.abs(p.x - A.xb) < 1e-9 ? 'scale' : 'roller';
-    support(sx(p.x), kind);
+    const isBalance = i !== 0 && Math.abs(p.x - A.xb) < 1e-9;
+    const kind = i === 0 ? 'pin' : isBalance ? 'scale' : 'roller';
+    // while roller B is being dragged it is drawn at the pointer, before the server has answered
+    const at = isBalance && state.balancePreview !== null ? state.balancePreview : p.x;
+    support(sx(at), kind);
   });
 
   // beam body: top edge left->right, bottom edge right->left

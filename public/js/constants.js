@@ -24,6 +24,12 @@ export const HANDLE_COLOR = '#2563eb';
 export const X_RESOLUTION = 100;       // the handle snaps to 1 / X_RESOLUTION metres (0.01 m)
 export const SNAP_TOLERANCE = 1e-9;    // absorbs floating-point noise when rounding limits inward
 
+// --- Draggable middle support (roller B on the compound beam) ---
+export const BALANCE_HIT_HALF_WIDTH = 54;  // pixels either side of the support that still grab it
+export const BALANCE_HIT_BELOW = 28;       // pixels below the bench surface (covers the scale display)
+export const BALANCE_ARROW_OFFSET = 46;    // distance of the drag arrows from the support centre
+export const DRAG_THRESHOLD = 3;           // pixels the pointer must move before a press counts as a drag
+
 // --- Load blocks ---
 export const LOAD_WIDTH = 36;
 export const LOAD_BASE_HEIGHT = 16;

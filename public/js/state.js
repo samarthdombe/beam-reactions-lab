@@ -13,6 +13,7 @@ export const state = {
   config: null,      // physics constants, taken from the latest server response
   beam: null,        // { length, selfWeight } chosen by the user; null = server defaults
   pendingX: null,    // x (m) where the next weight will go; moved by the handle or the x field
+  balancePreview: null, // x (m) of roller B while it is being dragged; null when not dragging
   busy: false,       // an Add request is in flight
   requestId: 0,      // id of the newest request; older responses are ignored
 };
