@@ -14,4 +14,4 @@ keywords = ["statics", "beam", "education", "simulation"]
 Repository = "https://github.com/advaetuc/beam-reactions-lab"
 
 [tool.vercel]
-entrypoint = "api.analyze:handler"
+entrypoint = "api.analyze:app"

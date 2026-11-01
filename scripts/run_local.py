@@ -1,6 +1,6 @@
 """Local dev server for Mac/Linux/Windows: serves public/ and POST /api/analyze.
 
-Run:  python3 scripts/run_local.py   then open http://localhost:8000
+Run:  python3 scripts/run_local.py   then open http://localhost:8040
 """
 import json
 import os

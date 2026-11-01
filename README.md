@@ -25,7 +25,7 @@ Requires Python 3.10+. Nothing to install.
 python scripts/run_local.py
 ```
 
-Open <http://localhost:8000>. Press `Control+C` to stop. The script serves `public/` and answers
+Open <http://localhost:8040>. Press `Control+C` to stop. The script serves `public/` and answers
 `POST /api/analyze`. Use `python3` if `python` is not available on your system.
 
 ### Vercel
@@ -101,7 +101,7 @@ beam-reactions-lab/
 **Request**
 
 ```sh
-curl -s -X POST localhost:8000/api/analyze \
+curl -s -X POST localhost:8040/api/analyze \
   -d '{"type":"compound","loads":[{"W":10,"x":0.8}]}'
 ```
 
