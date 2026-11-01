@@ -1,8 +1,8 @@
 // DOM panels (live values, table, conclusion), config consumer, and the Add / Reset flows.
 import { analyze, ApiError } from './api.js';
-import { MEAN_ERROR_LIMIT, PERCENT, SNAP_TOLERANCE, X_RESOLUTION } from './constants.js';
-import { animateFailure, draw, prepareFailure } from './render.js';
-import { buildRow, clearExperiment, randomNoise, state } from './state.js';
+import { EQUILIBRIUM_TOLERANCE, SNAP_TOLERANCE, X_RESOLUTION } from './constants.js';
+import { draw } from './render.js';
+import { buildRow, clearExperiment, state } from './state.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -108,34 +108,39 @@ function acceptAnalysis(analysis) {
 
 // ---- panels ----
 
+/** Format a force in newtons; `+ 0` turns -0 into 0 so nothing shows as "-0.000". */
+const newtons = (value) => (value + 0).toFixed(3);
+
 function renderTable() {
   $('tb').innerHTML = state.rows.length
-    ? state.rows.map((r, i) => {
-      const cells = r.ra_exp !== undefined
-        ? `<td>${r.ra_exp.toFixed(3)}</td><td>${r.ra_anal.toFixed(3)}</td><td>${r.rb_exp.toFixed(3)}</td><td>${r.rb_anal.toFixed(3)}</td>`
-        : `<td>${r.ri.toFixed(3)}</td><td>${r.rf.toFixed(3)}</td><td>${r.re.toFixed(3)}</td><td>${r.ra.toFixed(3)}</td>`;
-      return `<tr><td>${i + 1}</td><td>${r.W.toFixed(2)}</td><td>${r.x.toFixed(2)}</td>${cells}<td>${r.er.toFixed(2)}</td></tr>`;
-    }).join('')
-    : '<tr><td colspan="8" class="muted" style="text-align:center">No readings yet. Add a weight to begin.</td></tr>';
+    ? state.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${r.W.toFixed(2)}</td><td>${r.x.toFixed(2)}</td>`
+      + `<td>${newtons(r.ra)}</td><td>${newtons(r.rb)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted" style="text-align:center">No readings yet. Add a weight to begin.</td></tr>';
 }
 
+/** Check ΣF = 0 and ΣM = 0 (about A) for the current loads, using the server's reactions. */
 function renderConclusion() {
-  const { A, rows, loads, broken, failInfo } = state;
+  const { A, rows, loads } = state;
   let html = '<p>Add weights to generate the conclusion.</p>';
   if (rows.length) {
-    const n = rows.length;
-    const mean = rows.reduce((sum, r) => sum + r.er, 0) / n;
-    const last = rows[n - 1];
-    const residual = (last.rb_exp !== undefined && last.rb_anal !== undefined)
-      ? (last.rb_exp - last.rb_anal)
-      : (last.re - last.ra);
-    const ok = mean < MEAN_ERROR_LIMIT;
-    const total = A.self_w + loads.reduce((sum, v) => sum + v.W, 0) - (broken ? failInfo.W : 0);
-    html = `<p>Over ${n} reading${n > 1 ? 's' : ''}, the mean percentage error is <b>${mean.toFixed(2)}%</b>. For the latest reading the force residual is ΣF<sub>y</sub> = ${residual.toFixed(3)} N and the moment residual about the left support is ΣM = ${(residual * A.xb).toFixed(3)} N·m (total load with self-weight: ${total.toFixed(2)} N).</p>
-  <p class="${ok ? 'ok' : 'bad'}"><b>${ok ? 'The beam is in static equilibrium: ΣF = 0 and ΣM = 0 hold within experimental error, so the moment law is verified.' : 'The residuals are larger than expected (mean error above 5%). Recheck the readings before concluding equilibrium.'}</b></p>`;
-  }
-  if (broken) {
-    html += `<p class="bad">The beam failed when ${failInfo.W.toFixed(1)} N was added at x = ${failInfo.x.toFixed(2)} m. The conclusion uses only readings recorded before failure.</p>`;
+    const L = state.config.L;
+    const added = loads.reduce((sum, v) => sum + v.W, 0);
+    const total = A.self_w + added;
+    const upward = A.sup.reduce((sum, p) => sum + p.r, 0);
+    // the self-weight acts at mid-span (also for the compound beam: its two segment
+    // shares together have their moment at L/2)
+    const loadMoment = loads.reduce((sum, v) => sum + v.W * v.x, 0) + A.self_w * (L / 2);
+    const reactionMoment = A.sup.reduce((sum, p) => sum + p.r * p.x, 0);
+    const sumF = upward - total;
+    const sumM = reactionMoment - loadMoment;
+    const ok = Math.abs(sumF) < EQUILIBRIUM_TOLERANCE && Math.abs(sumM) < EQUILIBRIUM_TOLERANCE;
+    const [ra, rb, rc] = A.sup.map((p) => p.r);
+    const reactionText = A.sup.length === 3
+      ? `R<sub>A</sub> + R<sub>B</sub> + R<sub>C</sub> = ${newtons(ra)} + ${newtons(rb)} + ${newtons(rc)} = ${newtons(upward)} N`
+      : `R<sub>A</sub> + R<sub>B</sub> = ${newtons(ra)} + ${newtons(rb)} = ${newtons(upward)} N`;
+    html = `<p>With ${rows.length} weight${rows.length > 1 ? 's' : ''} on the beam (${added.toFixed(2)} N added + ${A.self_w.toFixed(2)} N self-weight = <b>${total.toFixed(2)} N</b> total load), the support reactions are ${reactionText}.</p>
+  <p>ΣF<sub>y</sub> = ${newtons(upward)} − ${total.toFixed(3)} = <b>${newtons(sumF)} N</b> and ΣM about A = <b>${newtons(sumM)} N·m</b>.</p>
+  <p class="${ok ? 'ok' : 'bad'}"><b>${ok ? 'The beam is in static equilibrium: ΣF = 0 and ΣM = 0, so the moment law is verified.' : 'The sums are not zero. Check the loads and supports.'}</b></p>`;
   }
   $('ctext').innerHTML = html;
 }
@@ -145,9 +150,6 @@ export function refresh() {
   const { A } = state;
   if (!A) return;
   $('tot').textContent = A.total.toFixed(2) + ' N';
-  $('mm').textContent = A.M.toFixed(2) + ' N·m';
-  $('sg').textContent = (A.sigma / 1e6).toFixed(1) + ' MPa';
-  $('sbar').style.width = Math.min(PERCENT, A.s * PERCENT) + '%';
   renderTable();
   renderConclusion();
   draw();
@@ -155,21 +157,8 @@ export function refresh() {
 
 // ---- flows ----
 
-function fail() {
-  state.broken = true;
-  $('alert').style.display = 'block';
-  prepareFailure();
-  refresh();
-  $('sbar').style.width = PERCENT + '%';
-  animateFailure();
-}
-
-/**
- * Validate the inputs, ask the server for the new analysis, record a reading.
- * `noise` (a function returning a fraction) is injectable to make readings deterministic.
- */
-export async function addLoad({ noise = randomNoise } = {}) {
-  if (state.broken) return msg('The beam has failed. Press Reset to start again.');
+/** Validate the inputs, ask the server for the new analysis, record a reading. */
+export async function addLoad() {
   if (state.busy) return;
   const W = +$('W').value;
   const x = +$('X').value;
@@ -196,13 +185,7 @@ export async function addLoad({ noise = randomNoise } = {}) {
     if (id !== state.requestId) return; // superseded by a Reset or beam-type change: drop the stale result
     state.loads.push({ W, x });
     acceptAnalysis(analysis);
-    if (analysis.s >= 1) {
-      state.failInfo = { W, x };
-      return fail();
-    }
-    const row = buildRow(analysis, W, x, noise);
-    state.rows.push(row);
-    state.reading = row.rf !== undefined ? row.rf : +(analysis.init_bal + row.rb_exp).toFixed(3);
+    state.rows.push(buildRow(analysis, W, x));
     refresh();
   } catch (e) {
     console.error(e);
@@ -219,9 +202,7 @@ export async function resetExperiment() {
   clearExperiment();
   state.busy = false; // an in-flight Add is superseded below, so it must not block new ones
   const id = ++state.requestId;
-  $('alert').style.display = 'none';
   msg();
-  $('sbar').style.width = '0';
 
   let analysis;
   try {
