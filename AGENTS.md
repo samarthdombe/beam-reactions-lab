@@ -2,7 +2,7 @@
 
 ## 1. Project Context & Mission
 - **Core Purpose:** Browser lab simulation of beam support reactions (simple beam; compound beam with pin A, roller/balance B, internal hinge, roller C). Users add point loads, watch bending/failure, fill an observation table, export a PDF report.
-- **Current Development Phase:** Just finished: restructure into a tested repo, variable beam length and self-weight, draggable load handle, draggable roller B (compound beam), docs, and a Vercel configuration (`[tool.vercel] entrypoint = "api.analyze:handler"` in `pyproject.toml`). **Vercel deployment is still unverified.** Next objective: confirm a Vercel deploy answers `POST /api/analyze` (fallbacks in section 5), then the owner decides LICENSE (MIT proposed, not written).
+- **Current Development Phase:** Vercel deployment verified working (`[tool.vercel] entrypoint = "api.analyze:app"` in `pyproject.toml`). Local dev server runs via `python scripts/run_local.py` (dual-stack IPv4/IPv6 support on port 8040, overridable by `PORT` env var). Owner decides LICENSE (MIT proposed, not written).
 - **Tech Stack:** Python 3.10+ stdlib only (CI tests 3.10 and 3.12, venv tested on 3.12.9; no runtime/dev deps), `unittest`; static HTML/CSS + vanilla JS as native ES modules (no bundler, no TS, no build step); html2pdf.js via CDN (classic script); Node 20 only for `node --check` in CI; Vercel Python serverless function; GitHub Actions CI.
 
 ## 2. Project Architecture & Mapping
@@ -55,7 +55,7 @@
   - Compound beam: a load right of the hinge gives negative R_A (uplift); correct, do not "fix". Loads at `x <= hx` count as the left segment.
   - `R_analytical` in the table is cumulative for all added loads while W/x show the latest load: ambiguous, documented, not fixed.
   - `test_entrypoints.py` imports `api.analyze` and `scripts.run_local`: run tests from the repo root. Note that `EntrypointTest` requires loopback socket access to run its ephemeral HTTP test servers; running inside a network-isolated sandbox without socket permissions raises `WinError 10013`.
-  - `run_local.py` serves `public/` on GET, but handles only `POST /api/analyze` (404 for other POST paths). It runs on port 8040 (`PORT = 8040` in `scripts/run_local.py`). Opening `simulation.html` directly via `file://` shows "Python backend not reachable".
-  - **Vercel (unverified):** `pyproject.toml` is already configured with `[tool.vercel] entrypoint = "api.analyze:handler"`. If pages 404, remove `"outputDirectory": "public"` from `vercel.json`. Framework Preset must be "Other". Vercel runs the function as a `BaseHTTPRequestHandler` `handler` class.
+  - `run_local.py` serves `public/` on GET, but handles only `POST /api/analyze` (404 for other POST paths). It runs on port 8040 by default (`PORT = int(os.environ.get('PORT', 8040))`) using a dual-stack IPv6/IPv4 server (`::` with `IPV6_V6ONLY=0`) so `localhost` resolves seamlessly on macOS, Linux, and Windows. Opening `simulation.html` directly via `file://` shows "Python backend not reachable".
+  - **Vercel:** `pyproject.toml` is configured with `[tool.vercel] entrypoint = "api.analyze:app"` (WSGI callable). Framework Preset must be "Other". `api/analyze.py` exports both `app` (WSGI, used by Vercel and `vercel dev`) and `handler` (`BaseHTTPRequestHandler` class).
   - The browser code (drags, drawing, flows) has **no automated tests**; earlier checks were throwaway Node scripts against the live server, not in the repo. Add real tests before refactoring `render.js`/`ui.js`/`handle.js`.
   - Out of scope, documented in README: duplicated nav markup, static "Assumed values" in `theory.html` (describes the default beam), html2pdf CDN without SRI.
