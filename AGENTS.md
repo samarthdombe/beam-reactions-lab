@@ -22,7 +22,8 @@
 |---|---|
 | Dev server (serves `public/` + API) | `python scripts/run_local.py` -> http://localhost:8040 (PORT is 8040 in code; use `python3` on Mac/Linux) |
 | Unit tests (expect 47, OK) | `python -m unittest discover -s tests` (run from repo root; 47 tests pass in CI/normal environments; socket tests require loopback permission) |
-| JS syntax check (CI) | `for f in public/js/*.js; do node --check "$f"; done` |
+| JS syntax check (CI) | `for f in public/js/*.js; do node --check "$f"; done` (bash/zsh only) |
+| All checks, any OS, any folder | `python scripts/run_tests.py` (Windows: `py scripts\run_tests.py`) |
 | Real exception behind a 500 | `python -c "from beamlab import service; print(service.handle({...}))"` |
 | Deploy | push to `main` (Vercel auto-deploys); `vercel` / `vercel --prod` also work |
 - **Linting / Formatting:** No linter or formatter is configured. Follow `.editorconfig` (UTF-8, LF, 4 spaces; 2 for js/json/yml/html/css).

@@ -34,4 +34,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     print(f'Beam Reactions Lab running at http://localhost:{PORT}  (press Control+C to stop)')
-    ThreadingHTTPServer(('', PORT), Handler).serve_forever()
+    try:
+        ThreadingHTTPServer(('', PORT), Handler).serve_forever()
+    except KeyboardInterrupt:
+        print('\nStopped.')

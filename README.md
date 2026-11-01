@@ -154,9 +154,20 @@ return `500` with `{"error": "Internal error"}`.
 
 ## Testing
 
+One command runs everything CI runs, on Windows, macOS and Linux, from any folder:
+
+```sh
+python3 scripts/run_tests.py      # macOS / Linux
+py scripts\run_tests.py           # Windows (or: python scripts\run_tests.py)
+```
+
+It runs the Python unit tests, then `node --check` on every file in `public/js/` (skipped with a note
+if Node.js is not installed). The individual commands, from the repo root:
+
 ```sh
 python -m unittest discover -s tests
-for f in public/js/*.js; do node --check "$f"; done    # needs Node.js
+for f in public/js/*.js; do node --check "$f"; done          # macOS / Linux (bash, zsh)
+Get-ChildItem public/js/*.js | ForEach-Object { node --check $_.FullName }   # Windows PowerShell
 ```
 
 The unit tests cover:
@@ -174,7 +185,7 @@ The unit tests cover:
   browser can snap to is accepted.
 - **Entrypoints**: the Vercel handler and the local server answer the same way.
 
-CI (`.github/workflows/ci.yml`) runs exactly these two commands.
+CI (`.github/workflows/ci.yml`) runs the two individual commands.
 
 The browser code (dragging, drawing, the Add and Reset flows) has **no automated tests in this repo**:
 `node --check` only catches syntax errors. It was exercised during development with throwaway

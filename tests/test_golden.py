@@ -18,7 +18,7 @@ class GoldenParityTest(unittest.TestCase):
     def test_matches_original_exactly(self):
         for path in GOLDEN:
             with self.subTest(fixture=path.stem):
-                fixture = json.loads(path.read_text())
+                fixture = json.loads(path.read_text(encoding='utf-8'))
                 status, payload = service.process(json.dumps(fixture['request']).encode())
                 self.assertEqual(status, 200)
                 config = payload.pop('config')
@@ -32,7 +32,7 @@ class GoldenParityTest(unittest.TestCase):
         for path in GOLDEN:
             if path.stem.endswith('_failure'):
                 with self.subTest(fixture=path.stem):
-                    self.assertGreaterEqual(json.loads(path.read_text())['response']['s'], 1)
+                    self.assertGreaterEqual(json.loads(path.read_text(encoding='utf-8'))['response']['s'], 1)
 
     def test_config_object(self):
         _, payload = service.handle({'type': 'simple', 'loads': []})
@@ -46,7 +46,7 @@ class GoldenParityTest(unittest.TestCase):
         """Passing the default length and self-weight explicitly must change nothing."""
         for path in GOLDEN:
             with self.subTest(fixture=path.stem):
-                fixture = json.loads(path.read_text())
+                fixture = json.loads(path.read_text(encoding='utf-8'))
                 request = dict(fixture['request'], beam={'length': 1.0, 'selfWeight': 4.0})
                 status, payload = service.process(json.dumps(request).encode())
                 self.assertEqual(status, 200)

@@ -9,17 +9,17 @@ current venv runs on 3.12.9
 ```sh
 git clone https://github.com/advaetuc/beam-reactions-lab.git
 cd beam-reactions-lab
-python scripts/run_local.py          # http://localhost:8000
+python scripts/run_local.py          # http://localhost:8040
 ```
 
 ## Before you open a pull request
 
 ```sh
-python -m unittest discover -s tests
-for f in public/js/*.js; do node --check "$f"; done
+python3 scripts/run_tests.py     # macOS / Linux
+py scripts\run_tests.py          # Windows
 ```
 
-Both commands also run in CI.
+This runs the unit tests and the `node --check` syntax check, the same two checks CI runs.
 
 ## Ground rules
 

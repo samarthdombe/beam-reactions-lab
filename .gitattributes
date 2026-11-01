@@ -1,0 +1,6 @@
+# Keep LF line endings on every OS (matches .editorconfig), so Windows checkouts
+# with core.autocrlf=true do not rewrite source files or test fixtures.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
