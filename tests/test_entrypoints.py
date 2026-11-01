@@ -36,7 +36,7 @@ class EntrypointTest(unittest.TestCase):
                 status, payload = self.post(cls, valid)
                 self.assertEqual(status, 200)
                 self.assertIn('config', payload)
-                self.assertLess(payload['sup'][0]['r'], 0)
+                self.assertAlmostEqual(sum(s['r'] for s in payload['sup']), 10.0, places=9)
                 status, payload = self.post(cls, bad)
                 self.assertEqual(status, 400)
                 self.assertIn('error', payload)

@@ -15,14 +15,14 @@ def load(W=10, x=0.5):
 
 
 BAD_REQUESTS = {
-    'W below minimum': body(load(W=0.49)),
-    'W zero': body(load(W=0)),
+    'W below minimum': body(load(W=-0.0001)),
     'W negative': body(load(W=-1)),
-    'W above maximum': body(load(W=50.01)),
+    'W above maximum': body(load(W=100.0001)),
+    'W with 5 decimals': body(load(W=10.12345)),
     'W huge (1e9)': body(load(W=1e9)),
     'W huge integer': b'{"loads":[{"W":1' + b'0' * 400 + b',"x":0.5}]}',
-    'x below minimum': body(load(x=0.04)),
-    'x above maximum': body(load(x=0.96)),
+    'x below minimum': body(load(x=-0.01)),
+    'x above maximum': body(load(x=1.01)),
     'x far out (5)': body(load(x=5)),
     'x negative': body(load(x=-0.5)),
     'W NaN literal': b'{"loads":[{"W":NaN,"x":0.5}]}',
@@ -110,6 +110,18 @@ class ValidationTest(unittest.TestCase):
                 self.assertEqual(status, 200)
                 self.assertEqual(len(payload['sup']), 2)   # simple beam: A and B
                 self.assertEqual(payload['total'], 0)
+
+
+class AcceptedLoadsTest(unittest.TestCase):
+    def test_full_ranges_and_four_decimals_are_accepted(self):
+        for W, x in ((0, 0), (100, 1), (12.3456, 0.5), (0.0001, 0.25), (99.9999, 0.75)):
+            with self.subTest(W=W, x=x):
+                status, _ = service.process(body(load(W=W, x=x)))
+                self.assertEqual(status, 200)
+
+    def test_decimal_error_message(self):
+        status, payload = service.process(body(load(W=1.23456)))
+        self.assertEqual((status, payload), (400, {'error': 'loads[0].W must have at most 4 decimal places'}))
 
 
 if __name__ == '__main__':

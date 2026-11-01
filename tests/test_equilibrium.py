@@ -9,6 +9,7 @@ LOAD_SETS = [
     [(5, 0.2), (12.5, 0.5), (8, 0.85)],
     [(10, 0.8)],
     [(0.5, 0.05), (50, 0.95)],
+    [(0, 0), (100, 1.0), (12.3456, 0.4)],
     [(7.5, 0.6), (7.5, 0.61), (3, 0.4)],
 ]
 
@@ -28,10 +29,14 @@ class EquilibriumTest(unittest.TestCase):
                     total = out['self_w'] + sum(w for w, _ in loads)
                     self.assertAlmostEqual(sum(s['r'] for s in out['sup']), total, delta=1e-9)
 
-    def test_compound_load_right_of_hinge_uplifts_pin_a(self):
-        """Statically correct: a load on the right makes pin A pull down (negative reaction)."""
-        out = self.analyse('compound', [(10, 0.8)])
-        self.assertLess(out['sup'][0]['r'], 0)
+    def test_compound_load_right_of_hinge_does_not_reach_pin_a(self):
+        """With the hinge on top of roller B, the beam is two separate spans (A..B and B..C):
+        a load right of B is shared by B and C only, so R_A does not change."""
+        before = self.analyse('compound', [(5, 0.2)])
+        after = self.analyse('compound', [(5, 0.2), (10, 0.8)])
+        self.assertAlmostEqual(before['sup'][0]['r'], after['sup'][0]['r'], delta=1e-12)
+        # 10 N at 0.8 m on span 0.4..1.0: C takes 10*0.4/0.6, B takes the rest
+        self.assertAlmostEqual(after['sup'][2]['r'], 10 * 0.4 / 0.6, delta=1e-9)
 
     def test_deflection_is_zero_at_every_support(self):
         for beam_type in ('simple', 'compound'):

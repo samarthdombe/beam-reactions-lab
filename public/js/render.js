@@ -1,6 +1,7 @@
 // Canvas rendering: bench, rigid beam, supports with reaction readouts, load blocks, load handle.
 // The beam is treated as rigid: it is always drawn straight and never bends, cracks or breaks.
 import { state } from './state.js';
+import { formatLength, unitSymbol } from './units.js';
 import {
   BEAM_LEFT_PX, BEAM_PX, BEAM_THICKNESS, BEAM_TOP, BENCH_HEIGHT, GRAIN_LINES, GRAIN_WAVE_FREQ, GROUND_Y,
   BALANCE_ARROW_OFFSET, BALANCE_HIT_BELOW, BALANCE_HIT_HALF_WIDTH,
@@ -15,6 +16,15 @@ const ARC_END = 7; // radians; just over a full turn, so arcs close into a circl
 
 /** Beam position in metres -> canvas x in pixels. */
 const sx = (x) => BEAM_LEFT_PX + (x / state.config.L) * BEAM_PX;
+
+/**
+ * Where the internal hinge of the compound beam is drawn. The server puts it exactly on top of
+ * the sliding support C (hx = xb), so while C is dragged the hinge moves with it.
+ */
+function hingeX() {
+  const { hx, xb } = state.config;
+  return state.balancePreview !== null ? state.balancePreview + (hx - xb) : hx;
+}
 
 // ---- draggable load-position handle ----
 
@@ -53,7 +63,7 @@ function dragArrows(x, y) {
   });
 }
 
-/** True if canvas point `p` is on the middle support (compound beam only), so it can be dragged. */
+/** True if canvas point `p` is on the sliding support C (compound beam only), so it can be dragged. */
 export function isOnBalance(p) {
   const a = state.A;
   if (!state.config || !a || state.type !== 'compound' || a.sup.length !== 3) return false;
@@ -94,7 +104,7 @@ function drawHandle() {
   ctx.font = 'bold 12px system-ui';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(`x = ${x.toFixed(2)} m`, px, HANDLE_Y - HANDLE_RADIUS - 6);
+  ctx.fillText(`x = ${formatLength(x)} ${unitSymbol()}`, px, HANDLE_Y - HANDLE_RADIUS - 6);
   ctx.restore();
 }
 
@@ -105,13 +115,15 @@ function layoutLoads() {
   const blocks = [];
   state.loads.forEach((load) => {
     const px = sx(load.x);
-    const w = LOAD_WIDTH;
+    const label = String(+load.W.toFixed(4)); // up to 4 decimals, no trailing zeros
+    ctx.font = 'bold 12px system-ui';
+    const w = Math.max(LOAD_WIDTH, ctx.measureText(label).width + 10); // wide enough for the label
     const h = LOAD_BASE_HEIGHT + Math.min(load.W, state.config.wMax) * LOAD_HEIGHT_PER_N;
     let base = BEAM_TOP;
     blocks.forEach((other) => {
-      if (Math.abs(other.x - px) < w) base = Math.min(base, other.y - other.h / 2);
+      if (Math.abs(other.x - px) < (w + other.w) / 2) base = Math.min(base, other.y - other.h / 2);
     });
-    blocks.push({ x: px, y: base - h / 2, w, h, t: load.W % 1 ? load.W.toFixed(1) : load.W });
+    blocks.push({ x: px, y: base - h / 2, w, h, t: label });
   });
   return blocks;
 }
@@ -148,19 +160,31 @@ function bolt(x, y) {
 /** Digital display under a support showing its reaction force in newtons. */
 function readout(x, newtons) {
   ctx.fillStyle = '#0f172a';
-  ctx.fillRect(x - 38, GROUND_Y + 5, 76, 22);
+  ctx.fillRect(x - 39, GROUND_Y + 5, 78, 22);
   ctx.strokeStyle = '#64748b';
-  ctx.strokeRect(x - 38, GROUND_Y + 5, 76, 22);
+  ctx.strokeRect(x - 39, GROUND_Y + 5, 78, 22);
   ctx.fillStyle = '#4ade80';
-  ctx.font = '12px ui-monospace,monospace';
+  ctx.font = '11px ui-monospace,monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  // + 0 turns -0 into 0, so a zero reaction never shows as "-0.000 N"
-  ctx.fillText((newtons + 0).toFixed(3) + ' N', x, GROUND_Y + 16);
+  // rounding first and + 0 turn -0 into 0, so a zero reaction never shows as "-0.0000 N"
+  ctx.fillText((+newtons.toFixed(4) + 0).toFixed(4) + ' N', x, GROUND_Y + 16);
 }
 
-/** kind: 'pin' (fixed pin), 'roller', or 'scale' (roller sitting on the balance). */
-function support(x, kind) {
+/** Name of a support, centred under its readout. */
+function supportLabel(x, text) {
+  ctx.fillStyle = '#334155';
+  ctx.font = '12px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(text, x, GROUND_Y + 40);
+}
+
+/**
+ * kind: 'pin' (fixed pin) or 'roller'. `reaction` (N) is shown in a readout under the support;
+ * `draggable` adds the blue arrows of the sliding support.
+ */
+function support(x, kind, reaction, label, draggable = false) {
   const top = BEAM_TOP + BEAM_THICKNESS;
   steel(x - 34, GROUND_Y - 8, 68, 8, true);
   bolt(x - 26, GROUND_Y - 4);
@@ -184,7 +208,6 @@ function support(x, kind) {
     ctx.arc(x, top + 6, 6, 0, ARC_END);
     ctx.fill();
     ctx.stroke();
-    readout(x, state.A.sup[0].r); // reaction at A from the server (self-weight + added loads)
   } else {
     steel(x - 14, top + 22, 28, GROUND_Y - 8 - top - 22, false);
     steel(x - 26, top + 2, 52, 5, true);
@@ -196,11 +219,10 @@ function support(x, kind) {
       ctx.strokeStyle = '#334155';
       ctx.stroke();
     });
-    if (kind === 'scale') {
-      readout(x, state.A.bal); // reaction at B from the server
-      if (state.type === 'compound') dragArrows(x, GROUND_Y + 16); // this support can be dragged
-    }
   }
+  readout(x, reaction); // reaction from the server (self-weight + every load added so far)
+  if (draggable) dragArrows(x, GROUND_Y + 16);
+  supportLabel(x, label);
 }
 
 // ---- main draw ----
@@ -215,13 +237,19 @@ export function draw() {
   ctx.fillRect(0, GROUND_Y, canvas.width, BENCH_HEIGHT);
   if (!A) return;
 
-  A.sup.forEach((p, i) => {
-    const isBalance = i !== 0 && Math.abs(p.x - A.xb) < 1e-9;
-    const kind = i === 0 ? 'pin' : isBalance ? 'scale' : 'roller';
-    // while roller B is being dragged it is drawn at the pointer, before the server has answered
-    const at = isBalance && state.balancePreview !== null ? state.balancePreview : p.x;
-    support(sx(at), kind);
-  });
+  // Names shown in the browser: A = pin at the left end, B = roller at the right end,
+  // C = the sliding middle roller of the compound beam (the server calls it B / the balance).
+  const [pin, ...rollers] = A.sup;
+  support(sx(pin.x), 'pin', pin.r, 'A (pin)');
+  if (state.type === 'compound') {
+    const [slider, end] = rollers;
+    // while C is being dragged it is drawn at the pointer, before the server has answered
+    const at = state.balancePreview !== null ? state.balancePreview : slider.x;
+    support(sx(at), 'roller', slider.r, 'C (slider)', true);
+    support(sx(end.x), 'roller', end.r, 'B (roller)');
+  } else {
+    support(sx(rollers[0].x), 'roller', rollers[0].r, 'B (roller)');
+  }
 
   // rigid beam: a straight timber bar
   const left = sx(0);
@@ -251,7 +279,7 @@ export function draw() {
 
   // internal hinge (compound beam only)
   if (state.type === 'compound') {
-    const hx = sx(state.config.hx);
+    const hx = sx(hingeX());
     const hy = BEAM_TOP + BEAM_THICKNESS / 2;
     steel(hx - 4, BEAM_TOP - 4, 8, BEAM_THICKNESS + 8, true);
     ctx.fillStyle = '#e2e8f0';
@@ -278,13 +306,14 @@ export function draw() {
     ctx.fillText(b.t, b.x, b.y);
   });
 
-  // labels
-  ctx.fillStyle = '#334155';
-  ctx.font = '12px system-ui';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('A (pin)', sx(0) - 16, GROUND_Y + 40);
-  if (state.type === 'compound') ctx.fillText('hinge', sx(state.config.hx) - 14, BEAM_TOP - 10);
+  // hinge label
+  if (state.type === 'compound') {
+    ctx.fillStyle = '#334155';
+    ctx.font = '12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('hinge', sx(hingeX()), BEAM_TOP - 10);
+  }
 
   drawHandle();
 }

@@ -2,7 +2,7 @@
 import { initHandle } from './handle.js';
 import { exportPdf } from './report.js';
 import {
-  addLoad, changeBeam, changeBeamType, msg, resetExperiment, syncHandleFromInput,
+  addLoad, changeBeam, changeBeamType, changeUnit, msg, resetExperiment, syncHandleFromInput,
 } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -11,6 +11,7 @@ $('add').onclick = () => addLoad();
 $('reset').onclick = () => resetExperiment();
 $('pdf').onclick = () => exportPdf(msg);
 $('type').onchange = (e) => changeBeamType(e.target.value);
+$('unit').onchange = (e) => changeUnit(e.target.value);
 $('beamL').onchange = () => changeBeam();
 $('beamSW').onchange = () => changeBeam();
 $('X').addEventListener('input', syncHandleFromInput);

@@ -12,7 +12,7 @@ from typing import Optional
 DEFAULT_LENGTH = 1.0       # L, beam length (m)
 L_MIN = 0.5                # shortest accepted beam (m)
 L_MAX = 2.0                # longest accepted beam (m)
-DEFAULT_SELF_WEIGHT = 4.0  # total self-weight of the beam (N)
+DEFAULT_SELF_WEIGHT = 0.0  # total self-weight of the beam (N); weightless unless the user sets one
 SELF_WEIGHT_MIN = 0.0      # lightest accepted beam (N)
 SELF_WEIGHT_MAX = 20.0     # heaviest accepted beam (N)
 
@@ -23,16 +23,20 @@ YOUNGS_MODULUS = 10e9      # E (Pa)
 ULTIMATE_STRESS = 40e6     # ultimate bending stress (Pa)
 
 # --- Compound beam layout, as fractions of the beam length -------------------
-HINGE_FRACTION = 0.6       # internal hinge position / L
-BALANCE_FRACTION = 0.4     # default position of roller B (where the balance reads) / L
-BALANCE_MIN_FRACTION = 0.1 # roller B can be moved between these fractions of L; it must stay
-BALANCE_MAX_FRACTION = 0.5 # left of the hinge (0.6 L), or the beam is no longer statically determinate
+# The middle roller (the sliding support, shown as "C" in the browser; called "B"/balance in the API)
+# can be moved, and the internal hinge sits exactly on top of it and moves with it.
+BALANCE_FRACTION = 0.4     # default position of the sliding roller (and the hinge) / L
+BALANCE_MIN_FRACTION = 0.1 # the sliding roller can be moved between these fractions of L
+BALANCE_MAX_FRACTION = 0.9 # (past mid-span; the hinge rides on top, so any position keeps the beam determinate)
 
 # --- Load limits (enforced by the server) ------------------------------------
-W_MIN = 0.5                # smallest accepted added load (N)
-W_MAX = 50.0               # largest accepted added load (N); also the failure load
-X_MIN_FRACTION = 0.05      # nearest accepted load position to the left end / L
-X_MAX_FRACTION = 0.95      # farthest accepted load position / L
+W_MIN = 0.0                # smallest accepted added load (N)
+W_MAX = 100.0              # largest accepted added load (N)
+W_DECIMALS = 4             # an added load may have at most this many decimal places
+FAILURE_LOAD = 50.0        # total added load at which the utilisation `s` reaches 1 (the browser,
+                           # which treats the beam as rigid, ignores `s`)
+X_MIN_FRACTION = 0.0       # loads can go anywhere from the left end ...
+X_MAX_FRACTION = 1.0       # ... to the right end (fractions of L)
 MAX_LOADS = 50             # most loads accepted in one request
 
 # --- Numerics ----------------------------------------------------------------
@@ -53,7 +57,8 @@ class Beam:
 
     @property
     def hinge_x(self):
-        return HINGE_FRACTION * self.length
+        """The internal hinge sits exactly on top of the sliding roller and moves with it."""
+        return self.balance_x
 
     @property
     def balance_x(self):
@@ -95,6 +100,7 @@ def public_config(beam=None):
         'E': YOUNGS_MODULUS,
         'ultimateStress': ULTIMATE_STRESS,
         'wMin': W_MIN,
+        'wDecimals': W_DECIMALS,
         'xMin': beam.x_min,
         'xMax': beam.x_max,
         'xbMin': beam.balance_min,
