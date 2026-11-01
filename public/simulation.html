@@ -19,30 +19,24 @@
 <div class="stat"><span>Self-weight</span><b id="cfgSelfWeight">4.00 N</b></div>
 <div class="stat"><span>W<sub>max</sub></span><b id="cfgWMax">50 N</b></div>
 <div class="stat"><span>Total added load</span><b id="tot">0.00 N</b></div>
-<div class="stat"><span>Max bending moment</span><b id="mm">0.00 N·m</b></div>
-<div class="stat"><span>Bending stress</span><b id="sg">0.0 MPa</b></div>
-<div class="bar"><div id="sbar"></div></div>
 <button class="pri" id="pdf">Download experiment report as PDF</button>
 </aside>
 <div id="report">
 <section class="glass"><h2 id="ctitle">Simulation: simple beam</h2>
-<div class="cw"><canvas id="cv" width="900" height="330"></canvas><div id="alert" role="alert">Structural failure</div></div>
-<p class="muted">Drag the blue handle along the beam to choose where the next weight goes. On the compound beam you can also drag the middle support (roller B); moving it restarts the experiment.</p></section>
+<div class="cw"><canvas id="cv" width="900" height="330"></canvas></div>
+<p class="muted">The beam is treated as rigid: it does not bend or break, so only the support reactions change. Drag the blue handle along the beam to choose where the next weight goes. On the compound beam you can also drag the middle support (roller B); moving it restarts the experiment.</p></section>
 <section class="glass"><h2>Observation table</h2><div class="tw"><table>
 <thead>
   <tr>
     <th>S.No</th>
     <th>Load W (N)</th>
     <th>x (m)</th>
-    <th>R_A exp (N)</th>
-    <th>R_A anal (N)</th>
-    <th>R_B exp (N)</th>
-    <th>R_B anal (N)</th>
-    <th>Error (%)</th>
+    <th>Reaction at A, R<sub>A</sub> (N)</th>
+    <th>Reaction at B, R<sub>B</sub> (N)</th>
   </tr>
 </thead>
 <tbody id="tb"></tbody></table></div></section>
 <section class="glass" id="concl"><h2>Conclusion</h2><div id="ctext"></div>
-<p class="muted"><b>Theory:</b> A body is in static equilibrium when ΣF = 0 and ΣM = 0. Small percentage errors come from experimental factors such as balance resolution, support friction and measurement of x, but the analytical values confirm the moment law of equilibrium.</p></section>
+<p class="muted"><b>Theory:</b> A rigid body is in static equilibrium when ΣF = 0 and ΣM = 0. The reactions include the beam's self-weight and every weight added so far; on the compound beam the roller at C also carries part of the load.</p></section>
 </div></div></div>
 <script type="module" src="js/main.js"></script></body></html>

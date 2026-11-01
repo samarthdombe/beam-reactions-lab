@@ -32,7 +32,7 @@ export function initHandle() {
   };
 
   canvas.addEventListener('pointerdown', (event) => {
-    if (state.broken || !state.config) return;
+    if (!state.config) return;
     const point = canvasPoint(event);
     const kind = isOnHandle(point) ? 'load' : isOnBalance(point) ? 'balance' : null;
     if (!kind) return;
