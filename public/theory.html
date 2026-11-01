@@ -6,9 +6,9 @@
 <section class="glass"><h1>Theory and procedure</h1>
 <p class="sub"><b>Aim:</b> to determine the support reactions of simple and compound beams and verify them against the equations of equilibrium.</p>
 <div class="grid2">
-<div><h2>Equilibrium</h2><p>A beam at rest satisfies ΣF<sub>y</sub> = 0 and ΣM = 0 about any point.</p>
+<div><h2>Equilibrium</h2><p>The beam is treated as a rigid body: it does not bend, and stress and failure are not considered. A beam at rest satisfies ΣF<sub>y</sub> = 0 and ΣM = 0 about any point.</p>
 <p><b>Simple beam</b> (pin at A, balance at B, length L): R<sub>B</sub> = ΣWx / L and R<sub>A</sub> = ΣW − R<sub>B</sub>.</p>
 <p><b>Compound beam:</b> pin at A (x = 0), roller and balance at B (x = 0.4 m), internal hinge at 0.6 m and roller at C (x = 1.0 m). The hinge carries no moment, so the right segment is solved first and its hinge force is applied to the left segment.</p></div>
-<div><h2>Procedure</h2><ol><li>Open the simulation and note the initial balance reading (beam self-weight).</li><li>Enter a weight W and its distance x, then add it.</li><li>The Python backend returns the analytical reaction, bending moment, stress and deflection.</li><li>R<sub>exp</sub> = R<sub>final</sub> − R<sub>initial</sub>. Error % = |R<sub>analytical</sub> − R<sub>exp</sub>| / R<sub>analytical</sub> × 100.</li><li>Download the report as a PDF.</li></ol></div>
-<div><h2>Assumed values</h2><ul><li>L = 1 m, self-weight 4 N</li><li>Timber section 20 mm × 10 mm, E = 10 GPa</li><li>Ultimate bending stress 40 MPa</li><li>W<sub>max</sub> = 50 N added load</li></ul></div>
+<div><h2>Procedure</h2><ol><li>Open the simulation and note the initial reactions at A and B (beam self-weight only).</li><li>Enter a weight W and its distance x, then add it.</li><li>The Python backend returns the reactions R<sub>A</sub> and R<sub>B</sub>, which are recorded in the observation table.</li><li>Check that ΣF<sub>y</sub> = 0 and ΣM = 0 in the conclusion.</li><li>Download the report as a PDF.</li></ol></div>
+<div><h2>Assumed values</h2><ul><li>L = 1 m, self-weight 4 N</li><li>Rigid beam (no deflection, no failure)</li><li>W<sub>max</sub> = 50 N per added weight</li></ul></div>
 </div></section></div></body></html>

@@ -1,10 +1,10 @@
 # Beam Reactions Lab
 
 A browser lab simulation for the **support reactions of a beam**. Add weights to a simple beam
-or to a compound beam (pin A, roller/balance B, internal hinge, roller C), watch the beam bend and,
-if you overload it, break. You choose the beam's length and self-weight, drag a handle to decide
+or to a compound beam (pin A, roller/balance B, internal hinge, roller C) and read the reactions at
+supports A and B. The beam is treated as rigid: it does not bend, crack or break. You choose the beam's length and self-weight, drag a handle to decide
 where each weight goes, and on the compound beam drag the middle support (roller B) to move it. The
-lab records balance readings in an observation table, checks static equilibrium, and exports a
+lab records R<sub>A</sub> and R<sub>B</sub> in an observation table, checks static equilibrium, and exports a
 report as PDF.
 
 **Why it exists:** a hands-on way to see the moment law (ΣF = 0, ΣM = 0) hold, without lab
@@ -50,9 +50,9 @@ Open **Simulation** from the navigation bar.
    restart the experiment when you change them.
 3. **Choose where the weight goes.** Drag the blue handle above the beam (it starts at the midpoint
    and snaps to 0.01 m), or type the value in *Distance x*. The two stay in sync.
-4. **Enter a weight and press *Add weight*.** The beam bends, the balance reading and the
-   observation table update, and the stress bar fills. At full utilisation the beam breaks. Press
-   *Reset experiment* to start again.
+4. **Enter a weight and press *Add weight*.** The readouts under supports A and B, the observation
+   table (R<sub>A</sub>, R<sub>B</sub>) and the equilibrium check update. The beam is rigid, so it
+   never bends or breaks. Press *Reset experiment* to start again.
 5. **Compound beam only:** drag the middle support (roller B, marked with blue arrows) left or right
    between 0.1·L and 0.5·L. The server is asked when you let go, and the experiment restarts,
    because readings taken with B somewhere else no longer apply. *Reset experiment* keeps B where you
@@ -75,8 +75,8 @@ beam-reactions-lab/
 │   └── js/                 # native ES modules
 │       ├── main.js         # entry point, wires the controls
 │       ├── api.js          # POST /api/analyze client
-│       ├── state.js        # shared state, measurement-noise model
-│       ├── render.js       # canvas drawing, failure animation
+│       ├── state.js        # shared state, observation-table rows
+│       ├── render.js       # canvas drawing (rigid beam, reaction readouts)
 │       ├── ui.js           # panels, Add/Reset/beam-change flows, config consumer
 │       ├── handle.js       # drag handling: load-position handle and roller B
 │       ├── report.js       # PDF export
@@ -151,6 +151,10 @@ The server rejects: `W` or `x` outside their ranges, a `beam` object with a bad 
 values that are not numbers (strings, booleans, `null`), missing `W` or `x`, an unknown `type`,
 `loads` that is not a list, more than 50 loads, and malformed JSON. Unexpected server failures
 return `500` with `{"error": "Internal error"}`.
+
+> **Rigid-beam front end.** The server still computes deflection, bending moment, stress and the
+> utilisation `s` (and the golden tests pin them), but the browser ignores them: the beam is drawn
+> straight and never fails.
 
 ## Testing
 
