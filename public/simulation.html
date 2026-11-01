@@ -8,35 +8,37 @@
 <aside class="glass"><h2>Control panel</h2>
 <label for="type">Beam type</label>
 <select id="type"><option value="simple">Simple beam</option><option value="compound">Compound beam</option></select>
-<label for="beamL">Beam length L (m)</label><input id="beamL" type="number" step="0.05">
+<label for="unit">Length unit</label>
+<select id="unit"><option value="m">Metre (m)</option><option value="cm">Centimetre (cm)</option></select>
+<label for="beamL">Beam length L (<span class="unit">m</span>)</label><input id="beamL" type="number" step="0.05">
 <label for="beamSW">Beam self-weight (N)</label><input id="beamSW" type="number" step="0.5">
-<label for="W">Weight W (N)</label><input id="W" type="number" min="0.5" max="50" step="0.5" value="10">
-<label for="X">Distance x from left support (m)</label><input id="X" type="number" min="0.05" max="0.95" step="0.01" value="0.5">
+<label for="W">Weight W (N), 0 to 100, up to 4 decimals</label><input id="W" type="number" min="0" max="100" step="0.0001" value="10">
+<label for="X">Distance x from support A (<span class="unit">m</span>), 0 to L</label><input id="X" type="number" min="0" max="1" step="0.01" value="0.5">
 <button class="pri" id="add">Add weight</button><button id="reset">Reset experiment</button>
 <div id="msg" role="status"></div>
 <h2 style="margin-top:14px">Live values</h2>
 <div class="stat"><span>Beam length L</span><b id="cfgL">1.00 m</b></div>
-<div class="stat"><span>Self-weight</span><b id="cfgSelfWeight">4.00 N</b></div>
-<div class="stat"><span>W<sub>max</sub></span><b id="cfgWMax">50 N</b></div>
+<div class="stat"><span>Self-weight</span><b id="cfgSelfWeight">0.00 N</b></div>
+<div class="stat"><span>W<sub>max</sub></span><b id="cfgWMax">100 N</b></div>
 <div class="stat"><span>Total added load</span><b id="tot">0.00 N</b></div>
 <button class="pri" id="pdf">Download experiment report as PDF</button>
 </aside>
 <div id="report">
 <section class="glass"><h2 id="ctitle">Simulation: simple beam</h2>
 <div class="cw"><canvas id="cv" width="900" height="330"></canvas></div>
-<p class="muted">The beam is treated as rigid: it does not bend or break, so only the support reactions change. Drag the blue handle along the beam to choose where the next weight goes. On the compound beam you can also drag the middle support (roller B); moving it restarts the experiment.</p></section>
+<p class="muted">The beam is treated as rigid: it does not bend or break, so only the support reactions change. Drag the blue handle along the beam to choose where the next weight goes. On the compound beam you can also drag the sliding support C; the hinge sits on top of it and moves with it, and moving it restarts the experiment.</p></section>
 <section class="glass"><h2>Observation table</h2><div class="tw"><table>
-<thead>
+<thead id="thead">
   <tr>
     <th>S.No</th>
     <th>Load W (N)</th>
-    <th>x (m)</th>
+    <th>x (<span class="unit">m</span>)</th>
     <th>Reaction at A, R<sub>A</sub> (N)</th>
     <th>Reaction at B, R<sub>B</sub> (N)</th>
   </tr>
 </thead>
 <tbody id="tb"></tbody></table></div></section>
 <section class="glass" id="concl"><h2>Conclusion</h2><div id="ctext"></div>
-<p class="muted"><b>Theory:</b> A rigid body is in static equilibrium when ΣF = 0 and ΣM = 0. The reactions include the beam's self-weight and every weight added so far; on the compound beam the roller at C also carries part of the load.</p></section>
+<p class="muted"><b>Theory:</b> A rigid body is in static equilibrium when ΣF = 0 and ΣM = 0. The reactions include the beam's self-weight and every weight added so far; on the compound beam the load is shared by A, the sliding support C and the roller B at the right end.</p></section>
 </div></div></div>
 <script type="module" src="js/main.js"></script></body></html>

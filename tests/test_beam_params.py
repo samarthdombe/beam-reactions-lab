@@ -7,7 +7,7 @@ from beamlab.statics import bending_moment, reactions, self_loads
 
 LENGTHS = [0.5, 0.75, 1.0, 1.3, 2.0]
 SELF_WEIGHTS = [0.0, 2.5, 4.0, 20.0]
-# Load positions as fractions of L (none sits exactly on the hinge at 0.6 L).
+# Load positions as fractions of L (none sits exactly on the default hinge/roller B at 0.4 L).
 LOAD_FRACTIONS = [(5, 0.1), (12.5, 0.3), (8, 0.55), (3, 0.62), (7, 0.9)]
 
 
@@ -76,15 +76,17 @@ class HandComputedTest(unittest.TestCase):
         self.assertEqual(out['sup'][1]['x'], 2.0)
 
     def test_compound_beam_two_metres(self):
-        # L = 2 m: hinge 1.2 m, B 0.8 m. Self-weight 6 N -> 3.6 N at 0.6 m, 2.4 N at 1.6 m.
-        # 10 N at 1.8 m: R_C = (10*0.6 + 2.4*0.4) / 0.8 = 8.7 ; hinge force = 12.4 - 8.7 = 3.7
-        # R_B = (3.6*0.6 + 3.7*1.2) / 0.8 = 8.25 ; R_A = 3.6 + 3.7 - 8.25 = -0.95 (uplift)
-        status, out = post(request('compound', 2.0, 6.0, [(10, 1.8)]))
+        # L = 2 m: B and the hinge on top of it at 0.8 m. Self-weight 6 N -> 2.4 N at 0.4 m (0..0.8),
+        # 3.6 N at 1.4 m (0.8..2). 10 N at 1.4 m.
+        # Right span B..C (1.2 m): R_C = (3.6*0.6 + 10*0.6) / 1.2 = 6.8 ; hinge force = 13.6 - 6.8 = 6.8
+        # Left span A..B (0.8 m): 2.4 N at mid-span -> 1.2 N to A and 1.2 N to B ; R_B = 1.2 + 6.8 = 8.0
+        # check: sum R = 1.2 + 8.0 + 6.8 = 16 = 6 + 10 ; sum R*x = 8*0.8 + 6.8*2 = 20 = 6*1 + 10*1.4
+        status, out = post(request('compound', 2.0, 6.0, [(10, 1.4)]))
         self.assertEqual(status, 200)
         a, b, c = out['sup']
-        self.assertAlmostEqual(a['r'], -0.95, places=9)
-        self.assertAlmostEqual(b['r'], 8.25, places=9)
-        self.assertAlmostEqual(c['r'], 8.7, places=9)
+        self.assertAlmostEqual(a['r'], 1.2, places=9)
+        self.assertAlmostEqual(b['r'], 8.0, places=9)
+        self.assertAlmostEqual(c['r'], 6.8, places=9)
         self.assertAlmostEqual(b['x'], 0.8, places=12)
         self.assertEqual(c['x'], 2.0)
         self.assertAlmostEqual(out['xb'], 0.8, places=12)
@@ -103,32 +105,32 @@ class ConfigEchoTest(unittest.TestCase):
         cfg = out['config']
         self.assertEqual(status, 200)
         self.assertEqual((cfg['L'], cfg['selfWeight']), (2.0, 6.0))
-        self.assertAlmostEqual(cfg['hx'], 1.2, places=12)
+        self.assertAlmostEqual(cfg['hx'], 0.8, places=12)
         self.assertAlmostEqual(cfg['xb'], 0.8, places=12)
-        self.assertAlmostEqual(cfg['xMin'], 0.1, places=12)
-        self.assertAlmostEqual(cfg['xMax'], 1.9, places=12)
+        self.assertEqual((cfg['xMin'], cfg['xMax']), (0.0, 2.0))
+        self.assertEqual((cfg['wMin'], cfg['wMax']), (0.0, 100.0))
         self.assertAlmostEqual(cfg['xbMin'], 0.2, places=12)
-        self.assertAlmostEqual(cfg['xbMax'], 1.0, places=12)
+        self.assertAlmostEqual(cfg['xbMax'], 1.8, places=12)
         self.assertEqual((cfg['lMin'], cfg['lMax']), (0.5, 2.0))
         self.assertEqual((cfg['selfWeightMin'], cfg['selfWeightMax']), (0.0, 20.0))
         self.assertEqual(out['self_w'], 6.0)
 
     def test_partial_beam_object_uses_defaults_for_the_rest(self):
         _, out = post({'beam': {'length': 1.5}})
-        self.assertEqual((out['config']['L'], out['config']['selfWeight']), (1.5, 4.0))
+        self.assertEqual((out['config']['L'], out['config']['selfWeight']), (1.5, 0.0))
         _, out = post({'beam': {'selfWeight': 7}})
         self.assertEqual((out['config']['L'], out['config']['selfWeight']), (1.0, 7.0))
         _, out = post({'beam': {}})
-        self.assertEqual((out['config']['L'], out['config']['selfWeight']), (1.0, 4.0))
+        self.assertEqual((out['config']['L'], out['config']['selfWeight']), (1.0, 0.0))
 
     def test_partial_beam_object_with_balance_only(self):
         # length and selfWeight omitted: both must fall back to their defaults
         status, out = post({'type': 'compound', 'beam': {'balanceX': 0.2}})
         self.assertEqual(status, 200)
-        self.assertEqual((out['config']['L'], out['config']['selfWeight'], out['config']['xb']), (1.0, 4.0, 0.2))
+        self.assertEqual((out['config']['L'], out['config']['selfWeight'], out['config']['xb']), (1.0, 0.0, 0.2))
         status, out = post({'type': 'compound', 'beam': {'length': 2.0, 'balanceX': 0.5}})
         self.assertEqual(status, 200)
-        self.assertEqual((out['config']['L'], out['config']['selfWeight'], out['config']['xb']), (2.0, 4.0, 0.5))
+        self.assertEqual((out['config']['L'], out['config']['selfWeight'], out['config']['xb']), (2.0, 0.0, 0.5))
         status, out = post({'type': 'compound', 'beam': {'selfWeight': 7, 'balanceX': 0.3}})
         self.assertEqual(status, 200)
         self.assertEqual((out['config']['L'], out['config']['selfWeight'], out['config']['xb']), (1.0, 7.0, 0.3))
@@ -139,7 +141,7 @@ class ConfigEchoTest(unittest.TestCase):
                 status, out = post(body)
                 self.assertEqual(status, 200)
                 self.assertEqual((out['config']['L'], out['config']['selfWeight'], out['config']['xb']),
-                                 (1.0, 4.0, 0.4))
+                                 (1.0, 0.0, 0.4))
 
 
 class BeamValidationTest(unittest.TestCase):
@@ -162,9 +164,9 @@ class BeamValidationTest(unittest.TestCase):
         'beam is a number': {'beam': 5},
         'beam is a string': {'beam': 'big'},
         'unknown beam field': {'beam': {'lenght': 1.0}},
-        'x above scaled maximum (L=2)': {'beam': {'length': 2.0}, 'loads': [{'W': 10, 'x': 1.95}]},
-        'x below scaled minimum (L=2)': {'beam': {'length': 2.0}, 'loads': [{'W': 10, 'x': 0.06}]},
-        'x above scaled maximum (L=0.5)': {'beam': {'length': 0.5}, 'loads': [{'W': 10, 'x': 0.48}]},
+        'x beyond the end (L=2)': {'beam': {'length': 2.0}, 'loads': [{'W': 10, 'x': 2.01}]},
+        'x negative (L=2)': {'beam': {'length': 2.0}, 'loads': [{'W': 10, 'x': -0.01}]},
+        'x beyond the end (L=0.5)': {'beam': {'length': 0.5}, 'loads': [{'W': 10, 'x': 0.51}]},
     }
 
     def test_invalid_beam_returns_400_with_json_error(self):
@@ -179,9 +181,9 @@ class BeamValidationTest(unittest.TestCase):
         cases = [
             ({'beam': {'length': 3}}, 'beam.length must be between 0.5 and 2 m'),
             ({'beam': {'selfWeight': 21}}, 'beam.selfWeight must be between 0 and 20 N'),
-            ({'beam': {'balanceX': 0.6}}, 'beam.balanceX must be between 0.1 and 0.5 m'),
-            ({'beam': {'length': 2, 'balanceX': 0.1}}, 'beam.balanceX must be between 0.2 and 1 m'),
-            ({'beam': {'length': 2}, 'loads': [{'W': 10, 'x': 1.95}]}, 'loads[0].x must be between 0.1 and 1.9 m'),
+            ({'beam': {'balanceX': 0.95}}, 'beam.balanceX must be between 0.1 and 0.9 m'),
+            ({'beam': {'length': 2, 'balanceX': 0.1}}, 'beam.balanceX must be between 0.2 and 1.8 m'),
+            ({'beam': {'length': 2}, 'loads': [{'W': 10, 'x': 2.05}]}, 'loads[0].x must be between 0 and 2 m'),
             ({'beam': {'length': 'a'}}, 'beam.length must be a number'),
             ({'beam': {'bogus': 1}}, "beam has unknown field 'bogus' (allowed: length, selfWeight, balanceX)"),
             ({'beam': []}, 'beam must be an object with length and/or selfWeight'),
@@ -209,8 +211,8 @@ class BeamValidationTest(unittest.TestCase):
     def test_x_limits_scale_with_length(self):
         self.assertEqual(post({'beam': {'length': 2.0}, 'loads': [{'W': 10, 'x': 1.5}]})[0], 200)
         self.assertEqual(post({'beam': {'length': 1.0}, 'loads': [{'W': 10, 'x': 1.5}]})[0], 400)
-        self.assertEqual(post({'beam': {'length': 0.5}, 'loads': [{'W': 10, 'x': 0.025}]})[0], 200)
-        self.assertEqual(post({'beam': {'length': 1.0}, 'loads': [{'W': 10, 'x': 0.025}]})[0], 400)
+        self.assertEqual(post({'beam': {'length': 0.5}, 'loads': [{'W': 10, 'x': 0.6}]})[0], 400)
+        self.assertEqual(post({'beam': {'length': 1.0}, 'loads': [{'W': 10, 'x': 0.6}]})[0], 200)
 
     def test_scaled_x_boundaries_are_accepted_exactly(self):
         for length in (0.5, 1.3, 2.0):
@@ -251,30 +253,33 @@ class SnappedValuesAreAcceptedTest(unittest.TestCase):
 
     def test_derived_limits_are_nearest_decimal_values(self):
         beam = config.Beam(0.8)
-        self.assertEqual((beam.x_min, beam.x_max), (0.04, 0.76))
-        self.assertEqual((beam.balance_min, beam.balance_max), (0.08, 0.4))
+        self.assertEqual((beam.x_min, beam.x_max), (0.0, 0.8))
+        self.assertEqual((beam.balance_min, beam.balance_max), (0.08, 0.72))
 
 
 class MovableBalanceTest(unittest.TestCase):
-    """Roller B (the balance) can be moved along the compound beam."""
+    """Roller B (the balance; "C" in the browser) can be moved; the hinge sits on top of it."""
 
     def beam_with_balance(self, balance, length=1.0):
         return config.Beam(length, 4.0, balance)
 
     def test_hand_computed_balance_at_0_2(self):
-        # L = 1 m, B moved to 0.2 m. Self-weight 4 N -> 2.4 N at 0.3 m, 1.6 N at 0.8 m; 10 N at 0.8 m.
-        # R_C = (1.6 + 10) * (0.8 - 0.6) / 0.4 = 5.8 ; hinge force = 11.6 - 5.8 = 5.8
-        # R_B = (2.4*0.3 + 5.8*0.6) / 0.2 = 21.0 ; R_A = 2.4 + 5.8 - 21.0 = -12.8
-        body = request('compound', 1.0, 4.0, [(10, 0.8)])
+        # L = 1 m, B (and the hinge on top of it) moved to 0.2 m.
+        # Self-weight 4 N -> 0.8 N at 0.1 m (span 0..0.2), 3.2 N at 0.6 m (span 0.2..1); 10 N at 0.6 m.
+        # Right span B..C (0.8 m): R_C = (3.2*0.4 + 10*0.4) / 0.8 = 6.6 ; hinge force = 13.2 - 6.6 = 6.6
+        # Left span A..B (0.2 m): 0.8 N at mid-span -> 0.4 N to A, 0.4 N to B ; R_B = 0.4 + 6.6 = 7.0
+        # check: sum R = 0.4 + 7 + 6.6 = 14 = 4 + 10 ; sum R*x = 7*0.2 + 6.6*1 = 8 = 4*0.5 + 10*0.6
+        body = request('compound', 1.0, 4.0, [(10, 0.6)])
         body['beam']['balanceX'] = 0.2
         status, out = post(body)
         self.assertEqual(status, 200)
         a, b, c = out['sup']
-        self.assertAlmostEqual(a['r'], -12.8, places=9)
-        self.assertAlmostEqual(b['r'], 21.0, places=9)
-        self.assertAlmostEqual(c['r'], 5.8, places=9)
+        self.assertAlmostEqual(a['r'], 0.4, places=9)
+        self.assertAlmostEqual(b['r'], 7.0, places=9)
+        self.assertAlmostEqual(c['r'], 6.6, places=9)
         self.assertEqual((b['x'], out['xb']), (0.2, 0.2))
         self.assertEqual(out['config']['xb'], 0.2)
+        self.assertEqual(out['config']['hx'], 0.2)
 
     def test_equilibrium_for_any_balance_position(self):
         for length in (0.5, 1.0, 1.3, 2.0):
@@ -305,19 +310,30 @@ class MovableBalanceTest(unittest.TestCase):
         self.assertEqual(json.dumps(post(base)[1]), json.dumps(post(explicit)[1]))
 
     def test_balance_range_scales_with_length(self):
-        for length, low, high in ((1.0, 0.1, 0.5), (2.0, 0.2, 1.0), (0.5, 0.05, 0.25)):
+        for length, low, high in ((1.0, 0.1, 0.9), (2.0, 0.2, 1.8), (0.5, 0.05, 0.45)):
             for value, expected in ((low, 200), (high, 200), (low * 0.9, 400), (high * 1.1, 400)):
                 body = request('compound', length, 4.0)
                 body['beam']['balanceX'] = value
                 with self.subTest(L=length, B=value):
                     self.assertEqual(post(body)[0], expected)
 
-    def test_balance_must_stay_left_of_the_hinge(self):
-        for value in (0.6, 0.7, 0.95, 1.0):
+    def test_balance_can_move_past_mid_span_but_not_onto_the_end_supports(self):
+        for value, expected in ((0.6, 200), (0.75, 200), (0.9, 200), (0.95, 400), (1.0, 400), (0.05, 400)):
             body = request('compound', 1.0, 4.0)
             body['beam']['balanceX'] = value
             with self.subTest(B=value):
-                self.assertEqual(post(body)[0], 400)
+                self.assertEqual(post(body)[0], expected)
+
+    def test_hand_computed_balance_past_mid_span(self):
+        # L = 1 m, no self-weight, B (and the hinge) at 0.8 m; 10 N at 0.4 m and 10 N at 0.9 m.
+        # Left span A..B (0.8 m): 10 N at its middle -> 5 N to A, 5 N to B.
+        # Right span B..C (0.2 m): 10 N at its middle -> 5 N to B, 5 N to C.  So R_B = 10.
+        body = request('compound', 1.0, 0.0, [(10, 0.4), (10, 0.9)])
+        body['beam']['balanceX'] = 0.8
+        status, out = post(body)
+        self.assertEqual(status, 200)
+        self.assertEqual([round(s['r'], 9) for s in out['sup']], [5.0, 10.0, 5.0])
+        self.assertEqual((out['config']['xb'], out['config']['hx']), (0.8, 0.8))
 
     def test_invalid_balance_values(self):
         for value in ('0.3', True, None, [0.3], 0, -0.3):
@@ -345,13 +361,26 @@ class MovableBalanceTest(unittest.TestCase):
                                                sum(w * a for w, a in everything), delta=1e-9)
                         self.assertAlmostEqual(bending_moment(supports, everything, [beam.hinge_x])[0], 0.0, delta=1e-9)
 
-    def test_moving_balance_changes_only_the_reactions_it_should(self):
-        # The right segment (hinge to C) does not depend on where B is, so R_C must not change.
+    def test_hinge_moves_with_balance(self):
+        # The hinge sits exactly on top of B: default 0.4 L, and it follows B when moved.
+        for length, balance, hinge in ((1.0, None, 0.4), (1.0, 0.1, 0.1), (1.0, 0.2, 0.2),
+                                       (1.0, 0.5, 0.5), (2.0, None, 0.8), (2.0, 0.5, 0.5), (2.0, 1.0, 1.0)):
+            with self.subTest(L=length, B=balance):
+                body = request('compound', length, 4.0, [])
+                if balance is not None:
+                    body['beam']['balanceX'] = balance
+                status, out = post(body)
+                self.assertEqual(status, 200)
+                self.assertAlmostEqual(out['config']['hx'], hinge, places=12)
+                self.assertEqual(out['config']['hx'], out['config']['xb'])
+
+    def test_moving_balance_moves_the_right_segment_too(self):
+        # Because the hinge moves with B, the right segment (hinge to C) changes, so R_C changes too.
         base = request('compound', 1.0, 4.0, [(10, 0.8)])
         moved = request('compound', 1.0, 4.0, [(10, 0.8)])
         moved['beam']['balanceX'] = 0.2
         out_default, out_moved = post(base)[1], post(moved)[1]
-        self.assertAlmostEqual(out_default['sup'][2]['r'], out_moved['sup'][2]['r'], places=12)
+        self.assertNotAlmostEqual(out_default['sup'][2]['r'], out_moved['sup'][2]['r'], places=3)
         self.assertNotAlmostEqual(out_default['sup'][1]['r'], out_moved['sup'][1]['r'], places=3)
 
     def test_simple_beam_ignores_balance(self):

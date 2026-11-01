@@ -4,6 +4,12 @@
 
 export const API_URL = '/api/analyze';
 
+// Length units the page can display. `factor` converts metres to the unit.
+export const UNITS = {
+  m: { factor: 1, decimals: 2, xStep: 0.01, lengthStep: 0.05 },
+  cm: { factor: 100, decimals: 1, xStep: 0.1, lengthStep: 5 },
+};
+
 // --- Canvas geometry (pixels) ---
 export const BEAM_LEFT_PX = 60;     // x of the beam's left end
 export const BEAM_PX = 780;         // drawn length of the whole beam
@@ -20,7 +26,7 @@ export const HANDLE_COLOR = '#2563eb';
 export const X_RESOLUTION = 100;       // the handle snaps to 1 / X_RESOLUTION metres (0.01 m)
 export const SNAP_TOLERANCE = 1e-9;    // absorbs floating-point noise when rounding limits inward
 
-// --- Draggable middle support (roller B on the compound beam) ---
+// --- Draggable sliding support C on the compound beam ---
 export const BALANCE_HIT_HALF_WIDTH = 54;  // pixels either side of the support that still grab it
 export const BALANCE_HIT_BELOW = 28;       // pixels below the bench surface (covers the scale display)
 export const BALANCE_ARROW_OFFSET = 46;    // distance of the drag arrows from the support centre

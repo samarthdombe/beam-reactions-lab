@@ -82,6 +82,8 @@ def validate(body):
             if key not in item:
                 raise ValidationError(f'loads[{i}].{key} is required')
         w = _number_in_range(item['W'], f'loads[{i}].W', config.W_MIN, config.W_MAX, 'N')
+        if round(w, config.W_DECIMALS) != w:
+            raise ValidationError(f'loads[{i}].W must have at most {config.W_DECIMALS} decimal places')
         x = _number_in_range(item['x'], f'loads[{i}].x', beam.x_min, beam.x_max, 'm')
         loads.append((w, x))
     return beam_type, loads, beam
@@ -106,7 +108,7 @@ def analyze(beam_type, added, beam=config.Beam()):
             'init_bal': reactions(beam_type, own, beam)[1],
             'added_bal': reactions(beam_type, added, beam)[1] if added else 0.0,
             'M': peak, 'xm': x_peak, 'sigma': sigma, 'total': total, 'self_w': beam.self_weight,
-            's': max(sigma / config.ULTIMATE_STRESS, total / config.W_MAX), 'defl': defl,
+            's': max(sigma / config.ULTIMATE_STRESS, total / config.FAILURE_LOAD), 'defl': defl,
             'config': config.public_config(beam)}
 
 

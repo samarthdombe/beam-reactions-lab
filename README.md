@@ -1,19 +1,20 @@
 # Beam Reactions Lab
 
-A browser lab simulation for the **support reactions of a beam**. Add weights to a simple beam
-or to a compound beam (pin A, roller/balance B, internal hinge, roller C) and read the reactions at
-supports A and B. The beam is treated as rigid: it does not bend, crack or break. You choose the beam's length and self-weight, drag a handle to decide
-where each weight goes, and on the compound beam drag the middle support (roller B) to move it. The
-lab records R<sub>A</sub> and R<sub>B</sub> in an observation table, checks static equilibrium, and exports a
-report as PDF.
+A browser lab simulation for the **support reactions of a rigid beam**. Add weights to a simple
+beam or to a compound beam and read the reaction at every support. The lab records the reactions in
+an observation table, checks static equilibrium (ΣF = 0, ΣM = 0) and exports a report as PDF.
 
-**Why it exists:** a hands-on way to see the moment law (ΣF = 0, ΣM = 0) hold, without lab
-equipment. The physics runs on a small Python backend and the front end is plain HTML, CSS and
-JavaScript. There are **no dependencies, no bundler and no build step**.
+- **Simple beam:** pin A at the left end, roller B at the right end.
+- **Compound beam:** pin A at the left end, a sliding roller **C** with an internal hinge directly on
+  top of it (drag it anywhere between 0.1·L and 0.9·L), and roller B at the right end.
+- The beam is **rigid**: it does not bend, crack or break. Only the reactions change.
+- Weights from **0 to 100 N** (up to 4 decimal places), placed anywhere from **x = 0 to x = L**.
+- Beam length 0.5 to 2 m and self-weight 0 to 20 N (default **0 N**). Lengths can be shown in
+  **metres or centimetres**.
 
-<!-- TODO: add a screenshot, e.g. docs/screenshot.png, then replace this line with:
-![Beam Reactions Lab simulation](docs/screenshot.png) -->
-> *Screenshot placeholder.*
+**Why it exists:** a hands-on way to see the moment law hold, without lab equipment. The physics runs
+on a small Python backend and the front end is plain HTML, CSS and JavaScript. There are **no
+dependencies, no bundler and no build step**.
 
 ## Quickstart
 
@@ -22,52 +23,58 @@ JavaScript. There are **no dependencies, no bundler and no build step**.
 Requires Python 3.10+. Nothing to install.
 
 ```sh
-python scripts/run_local.py
+python3 scripts/run_local.py      # macOS / Linux
+py scripts\run_local.py           # Windows (or: python scripts\run_local.py)
 ```
 
 Open <http://localhost:8040>. Press `Control+C` to stop. The script serves `public/` and answers
-`POST /api/analyze`. Use `python3` if `python` is not available on your system.
+`POST /api/analyze`. Opening the HTML files directly (`file://`) or through another static server
+shows "Python backend not reachable", because nothing answers the API there.
 
 ### Vercel
 
-The repo is set up for Vercel (`vercel.json`): `public/` is the static site and
-`api/analyze.py` is a Python serverless function.
+The repo is set up for Vercel (`vercel.json`): `public/` is the static site and `api/analyze.py` is
+a Python function. `api/analyze.py` offers the same handler twice: `handler` (a
+`BaseHTTPRequestHandler` class, for Vercel's classic Python runtime) and `app` (a WSGI callable, which
+newer runtimes and `vercel dev` require; `pyproject.toml` points `[tool.vercel] entrypoint` at it).
 
 ```sh
 vercel          # preview deploy
 vercel --prod   # production deploy
+vercel dev      # local, through the Vercel CLI
 ```
-
-`vercel dev` runs the same layout locally, but routing through it has **not been verified** in this
-repo yet. `python scripts/run_local.py` is the tested local path.
 
 ## Using the lab
 
 Open **Simulation** from the navigation bar.
 
 1. **Pick a beam** with *Beam type*: *Simple beam* or *Compound beam*.
-2. **Optionally change the beam.** *Beam length L* (0.5 to 2.0 m) and *Beam self-weight* (0 to 20 N)
-   restart the experiment when you change them.
-3. **Choose where the weight goes.** Drag the blue handle above the beam (it starts at the midpoint
-   and snaps to 0.01 m), or type the value in *Distance x*. The two stay in sync.
-4. **Enter a weight and press *Add weight*.** The readouts under supports A and B, the observation
-   table (R<sub>A</sub>, R<sub>B</sub>) and the equilibrium check update. The beam is rigid, so it
-   never bends or breaks. Press *Reset experiment* to start again.
-5. **Compound beam only:** drag the middle support (roller B, marked with blue arrows) left or right
-   between 0.1·L and 0.5·L. The server is asked when you let go, and the experiment restarts,
-   because readings taken with B somewhere else no longer apply. *Reset experiment* keeps B where you
-   put it, and changing the beam length puts it back.
+2. **Optionally change the beam.** *Length unit* switches every length between metres and
+   centimetres (display only; the experiment is kept). *Beam length L* and *Beam self-weight* restart
+   the experiment when you change them.
+3. **Choose where the weight goes.** Drag the blue handle above the beam (it snaps to 0.01 m), or
+   type the value in *Distance x from support A*. The two stay in sync.
+4. **Enter a weight and press *Add weight*.** The readouts under every support, the observation
+   table and the equilibrium check update. *Reset experiment* starts again.
+5. **Compound beam only:** drag the sliding support C (marked with blue arrows). The hinge moves
+   with it. The server is asked when you let go, and the experiment restarts, because readings taken
+   with C somewhere else no longer apply. *Reset experiment* keeps C where you put it; changing the
+   beam length puts it back at 0.4·L.
 6. **Download experiment report as PDF** exports the report section.
+
+The observation table has one row per added weight: the weight, its position, and the reactions
+**with every weight added so far** (and the self-weight): R<sub>A</sub>, R<sub>B</sub> and, on the
+compound beam, R<sub>C</sub>.
 
 ## Repository layout
 
 ```
 beam-reactions-lab/
-├── api/analyze.py          # thin Vercel entrypoint -> beamlab.service
+├── api/analyze.py          # Vercel entrypoint (handler class + WSGI app) -> beamlab.service
 ├── beamlab/                # stdlib-only package, no I/O
-│   ├── config.py           # single source of truth for all constants
+│   ├── config.py           # single source of truth for all constants and limits
 │   ├── statics.py          # self-loads, reactions, bending moment
-│   ├── deflection.py       # double integration + support correction
+│   ├── deflection.py       # double integration + support correction (not shown by the browser)
 │   └── service.py          # validate(body) -> analyze() -> (status, dict)
 ├── public/                 # static site
 │   ├── index.html  theory.html  simulation.html
@@ -76,27 +83,36 @@ beam-reactions-lab/
 │       ├── main.js         # entry point, wires the controls
 │       ├── api.js          # POST /api/analyze client
 │       ├── state.js        # shared state, observation-table rows
-│       ├── render.js       # canvas drawing (rigid beam, reaction readouts)
-│       ├── ui.js           # panels, Add/Reset/beam-change flows, config consumer
-│       ├── handle.js       # drag handling: load-position handle and roller B
+│       ├── units.js        # metre / centimetre display conversion
+│       ├── render.js       # canvas: rigid beam, supports, reaction readouts, load blocks
+│       ├── ui.js           # panels, Add/Reset/beam/unit flows, config consumer
+│       ├── handle.js       # drag handling: load-position handle and support C
 │       ├── report.js       # PDF export
 │       └── constants.js    # UI and drawing constants (no physics)
-├── scripts/run_local.py    # dev server, calls beamlab.service
+├── scripts/
+│   ├── run_local.py        # dev server, calls beamlab.service
+│   └── run_tests.py        # every CI check, on any OS, from any folder
 ├── tests/                  # unittest only; tests/golden/*.json
-├── docs/physics.md         # equations, assumptions, known limitations
+├── docs/physics.md         # equations, worked examples, known limitations
 ├── .github/                # CI workflow, PR template
-└── README.md  CONTRIBUTING.md  pyproject.toml  vercel.json  .gitignore  .editorconfig
+├── AGENTS.md  HANDOFF.md   # guide for contributors and coding agents; current project state
+└── README.md  CONTRIBUTING.md  pyproject.toml  vercel.json  .gitignore  .gitattributes  .editorconfig
 ```
 
 ## API
 
-`POST /api/analyze` with a JSON body.
+`POST /api/analyze` with a JSON body. All lengths are in metres; the browser converts for display.
 
-| Field   | Type                  | Notes                                                                |
-|---------|-----------------------|----------------------------------------------------------------------|
-| `type`  | `"simple"` or `"compound"` | Optional, defaults to `"simple"`.                               |
-| `loads` | list of `{W, x}`      | Optional, defaults to `[]`. At most 50. `W` in [0.5, 50] N, `x` in [0.05·L, 0.95·L] m. |
-| `beam`  | `{length, selfWeight, balanceX}` | Optional, and so is each field. `length` in [0.5, 2.0] m (default 1.0), `selfWeight` in [0, 20] N (default 4.0), `balanceX` = position of roller B on the compound beam, in [0.1·L, 0.5·L] m (default 0.4·L; accepted and ignored for the simple beam). Unknown fields are rejected. |
+| Field   | Type                  | Notes |
+|---------|-----------------------|-------|
+| `type`  | `"simple"` or `"compound"` | Optional, defaults to `"simple"`. |
+| `loads` | list of `{W, x}`      | Optional, defaults to `[]`. At most 50. `W` in [0, 100] N with at most 4 decimal places, `x` in [0, L] m. |
+| `beam`  | `{length, selfWeight, balanceX}` | Optional, and so is each field. `length` in [0.5, 2.0] m (default 1.0), `selfWeight` in [0, 20] N (default 0), `balanceX` = position of the sliding roller on the compound beam, in [0.1·L, 0.9·L] m (default 0.4·L; accepted and ignored for the simple beam). Unknown fields are rejected. |
+
+> **Support names.** The browser and the API name the compound beam's supports differently, because
+> the API keeps its original names. API `balanceX`, `xb`, `bal` and `sup[1]` are the **sliding
+> roller (browser C)**; API `sup[2]` is the **right-end roller (browser B)**. On the simple beam
+> `sup[1]` is roller B in both. The hinge sits on the sliding roller: `hx = xb`.
 
 **Request**
 
@@ -105,56 +121,51 @@ curl -s -X POST localhost:8040/api/analyze \
   -d '{"type":"compound","loads":[{"W":10,"x":0.8}]}'
 ```
 
-This uses the default beam (1 m, 4 N, roller B at 0.4 m). To choose another, add for example
-`"beam":{"length":2.0,"selfWeight":6,"balanceX":0.5}`; the load position range then scales with the
-length. Every field of `beam` is optional.
+This uses the default beam (1 m, 0 N self-weight, sliding roller and hinge at 0.4 m). To choose
+another, add for example `"beam":{"length":2.0,"selfWeight":6,"balanceX":1.2}`.
 
 **Response `200`** (numbers rounded and `defl` shortened here; the server returns full precision):
 
 ```json
 {
-  "sup": [{"x": 0, "r": -2.3}, {"x": 0.4, "r": 10.5}, {"x": 1.0, "r": 5.8}],
+  "sup": [{"x": 0, "r": 0.0}, {"x": 0.4, "r": 3.333}, {"x": 1.0, "r": 6.667}],
   "xb": 0.4,
-  "bal": 10.5,
-  "init_bal": 3.0,
-  "added_bal": 7.5,
-  "M": 1.16,
+  "bal": 3.333,
+  "init_bal": 0.0,
+  "added_bal": 3.333,
+  "M": 1.333,
   "xm": 0.8,
-  "sigma": 3480000.0,
+  "sigma": 4000000.0,
   "total": 10.0,
-  "self_w": 4.0,
+  "self_w": 0.0,
   "s": 0.2,
-  "defl": [0.0, -0.0374, -0.0746, "... 101 values, mm, downward positive"],
+  "defl": [0.0, 0.0, 0.0, "... 101 values, mm, downward positive"],
   "config": {
-    "L": 1.0, "hx": 0.6, "xb": 0.4, "selfWeight": 4.0, "wMax": 50.0, "nPoints": 100,
+    "L": 1.0, "hx": 0.4, "xb": 0.4, "selfWeight": 0.0, "wMax": 100.0, "nPoints": 100,
     "section": {"b": 0.02, "h": 0.01}, "E": 10000000000.0, "ultimateStress": 40000000.0,
-    "wMin": 0.5, "xMin": 0.05, "xMax": 0.95,
-    "xbMin": 0.1, "xbMax": 0.5,
+    "wMin": 0.0, "wDecimals": 4, "xMin": 0.0, "xMax": 1.0,
+    "xbMin": 0.1, "xbMax": 0.9,
     "lMin": 0.5, "lMax": 2.0, "selfWeightMin": 0.0, "selfWeightMax": 20.0
   }
 }
 ```
 
-Reactions `sup[i].r` are in newtons, positive upward. `s` is the utilisation: the beam fails at
-`s >= 1`. `config` carries every physics constant for the beam you asked for (length, hinge and balance
-positions, self-weight), and the front end reads them from it. `wMin`, `xMin`, `xMax`, `xbMin`, `xbMax`, `lMin`,
-`lMax`, `selfWeightMin` and `selfWeightMax` are the input limits the server enforces. See
-[docs/physics.md](docs/physics.md) for the equations.
+Reactions `sup[i].r` are in newtons, positive upward. `config` carries every physics constant and
+input limit for the beam you asked for, and the front end reads them from there. The server also
+returns bending moment (`M`, `xm`), stress (`sigma`), utilisation (`s`) and deflection (`defl`);
+the rigid-beam front end does not use them.
 
 **Response `400`** for invalid input, with a JSON body:
 
 ```json
-{"error": "loads[0].W must be between 0.5 and 50 N"}
+{"error": "loads[0].W must be between 0 and 100 N"}
 ```
 
-The server rejects: `W` or `x` outside their ranges, a `beam` object with a bad or unknown field, non-finite numbers (`NaN`, `Infinity`),
-values that are not numbers (strings, booleans, `null`), missing `W` or `x`, an unknown `type`,
-`loads` that is not a list, more than 50 loads, and malformed JSON. Unexpected server failures
-return `500` with `{"error": "Internal error"}`.
-
-> **Rigid-beam front end.** The server still computes deflection, bending moment, stress and the
-> utilisation `s` (and the golden tests pin them), but the browser ignores them: the beam is drawn
-> straight and never fails.
+The server rejects: `W` or `x` outside their ranges, `W` with more than 4 decimal places, a `beam`
+object with a bad or unknown field, non-finite numbers (`NaN`, `Infinity`), values that are not
+numbers (strings, booleans, `null`), missing `W` or `x`, an unknown `type`, `loads` that is not a
+list, more than 50 loads, and malformed JSON. Unexpected server failures return `500` with
+`{"error": "Internal error"}`.
 
 ## Testing
 
@@ -165,35 +176,29 @@ python3 scripts/run_tests.py      # macOS / Linux
 py scripts\run_tests.py           # Windows (or: python scripts\run_tests.py)
 ```
 
-It runs the Python unit tests, then `node --check` on every file in `public/js/` (skipped with a note
-if Node.js is not installed). The individual commands, from the repo root:
+It runs the Python unit tests (51), then `node --check` on every file in `public/js/` (skipped with a
+note if Node.js is not installed). The individual commands, from the repo root:
 
 ```sh
 python -m unittest discover -s tests
-for f in public/js/*.js; do node --check "$f"; done          # macOS / Linux (bash, zsh)
+for f in public/js/*.js; do node --check "$f"; done                          # macOS / Linux
 Get-ChildItem public/js/*.js | ForEach-Object { node --check $_.FullName }   # Windows PowerShell
 ```
 
 The unit tests cover:
 
-- **Golden parity**: the output must equal fixtures in `tests/golden/`, captured from the original
-  prototype before it was refactored (simple and compound beams × no load, one load, three loads,
-  and a load that breaks the beam).
-- **Equilibrium**: ΣR equals the total load for both beam types.
-- **Validation**: every rule above returns `400` with a JSON error.
-- **Variable beam**: equilibrium (forces and moments), a zero-moment hinge, deflection at the supports,
-  hand-computed 2 m reference cases, and the scaled limits, over several lengths and self-weights.
-- **Movable roller B**: equilibrium and a zero-moment hinge for any B position (including loads exactly on
-  the hinge or over B), a hand-computed case (B at 0.2 m), its range and validation, partial `beam`
-  objects that fall back to the defaults, the exact error messages, and that every 0.01 m position the
-  browser can snap to is accepted.
+- **Golden parity**: output must equal the fixtures in `tests/golden/` (simple and compound beam ×
+  no load, one load, three loads, heavy load). The simple-beam fixtures are the original prototype's
+  output; the compound ones were regenerated when the hinge moved onto the sliding roller. They run
+  on the prototype beam (1 m, 4 N self-weight).
+- **Hand-computed cases**: reference values worked out on paper (see `docs/physics.md`), including the
+  sliding roller at 0.2 m and past mid-span at 0.8 m.
+- **Equilibrium**: ΣR equals the total load and ΣR·x equals ΣW·x, with zero moment at the hinge, over
+  many lengths, self-weights and roller positions.
+- **Validation**: every rule above returns `400` with a JSON error, and the full ranges are accepted.
 - **Entrypoints**: the Vercel handler and the local server answer the same way.
 
-CI (`.github/workflows/ci.yml`) runs the two individual commands.
-
-The browser code (dragging, drawing, the Add and Reset flows) has **no automated tests in this repo**:
-`node --check` only catches syntax errors. It was exercised during development with throwaway
-Node scripts against the real server, which are not included.
+The browser code has **no automated tests**; `node --check` only catches syntax errors.
 
 ## Deploy
 
@@ -204,30 +209,15 @@ Node scripts against the real server, which are not included.
 
 ## Known limitations
 
-The first three are about the physics and are explained in [docs/physics.md](docs/physics.md).
-None of these have been fixed on purpose, because fixing them would change results or the visible behaviour.
-
-- **Compound deflection shape is approximate.** The slope is continuous at the hinge and has a kink
-  at roller B, the reverse of real behaviour. Reactions, moments and stress are unaffected.
-- **Uplift at pin A.** A compound beam with loads to the right of the hinge gives a negative
-  reaction at A. This is statically correct.
-- **`R_analytical` row semantics are ambiguous.** Each table row shows the cumulative reaction of
-  all loads added so far next to only the latest `W` and `x`.
+- **Rigid beam only.** The server still computes deflection, stress and failure, but the browser
+  ignores them. Those computations are approximate (see [docs/physics.md](docs/physics.md)).
+- **Self-weight is lumped** as point loads at the centre of each span, and does not grow with length.
+- **Moving support C restarts the experiment**, because earlier readings no longer apply.
+- **Static copy in the HTML.** `theory.html`'s "Assumed values" and the initial numbers on the
+  simulation page describe the default beam; the server's `config` overwrites the simulation page's
+  values on the first response.
 - **Navigation bar is copy-pasted** into all three HTML pages.
-- **"Assumed values" in `theory.html` are static text** and describe the default beam (1 m, 4 N, hinge
-  at 0.6 m, roller B at 0.4 m), as are the numbers in the simulation page's HTML that duplicate the
-  config: the initial Live values and the `min`/`max` attributes on the weight and distance inputs.
-  On the simulation page the server's `config` overwrites them as soon as the first response arrives.
-- **The drawn bending is exaggerated and normalised by L³** so that long and short beams look
-  comparable. It shows the shape of the deflection, not its true size; the numbers come from the server.
-- **Moving roller B restarts the experiment**, because readings taken with B somewhere else no longer
-  apply. B must stay between 0.1·L and 0.5·L, left of the hinge; further right the beam would no longer be
-  statically determinate. Deflection is zeroed at the nearest of the 101 grid stations, so for a B position
-  between stations it is off by under half a station (at most 0.005·L).
-- **Self-weight is independent of length.** A longer beam does not get heavier unless you raise the
-  self-weight yourself.
-- **The front end is not covered by automated tests**, as described under Testing.
-- **html2pdf loads from a CDN without a Subresource Integrity (SRI) hash.**
-- **Invalid input is now rejected.** Previously the server clamped `x` silently and accepted any
-  `W`. Valid input gives the same numbers as before.
+- **The front end is not covered by automated tests.**
+- **html2pdf loads from a CDN** without a Subresource Integrity (SRI) hash, so PDF export needs an
+  internet connection.
 - **No LICENSE file yet.** Until one is added, the code is "all rights reserved" by default.

@@ -2,14 +2,13 @@
 
 Thanks for helping. This project is deliberately small: **Python standard library only
 (3.10+), plain ES modules, no bundler, no framework, no build step.** Please keep it that way.
-current venv runs on 3.12.9
 
 ## Setup
 
 ```sh
 git clone https://github.com/advaetuc/beam-reactions-lab.git
 cd beam-reactions-lab
-python scripts/run_local.py          # http://localhost:8040
+python3 scripts/run_local.py         # http://localhost:8040  (Windows: py scripts\run_local.py)
 ```
 
 ## Before you open a pull request
@@ -35,4 +34,5 @@ This runs the unit tests and the `node --check` syntax check, the same two check
   (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`).
 - **Add tests** for new validation rules or behaviour, using `unittest`.
 
-See [docs/physics.md](docs/physics.md) for the model and its known limitations.
+See [AGENTS.md](AGENTS.md) for the architecture and guardrails, [HANDOFF.md](HANDOFF.md) for the
+current state, and [docs/physics.md](docs/physics.md) for the model and its known limitations.

@@ -1,6 +1,6 @@
 // Pointer handling for the two draggable parts of the canvas:
 //   1. the load-position handle (sets where the next weight goes), and
-//   2. the middle support, roller B, of the compound beam (moves the balance).
+//   2. the sliding support C of the compound beam (the hinge moves with it).
 import { DRAG_THRESHOLD } from './constants.js';
 import { canvasPoint, isOnBalance, isOnHandle, xFromCanvasX } from './render.js';
 import { state } from './state.js';
