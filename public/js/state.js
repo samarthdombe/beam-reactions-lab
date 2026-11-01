@@ -37,16 +37,32 @@ export function randomNoise() {
  * Build one observation-table row from a server analysis.
  * `noise` is injectable (a function returning a fraction) so readings can be made deterministic.
  */
+//change for adding reaction at A in observation table 
+// In state.js
 export function buildRow(analysis, W, x, noise = randomNoise) {
+  // Support B (measured via balance scale with noise)
   const rf = +(analysis.init_bal + analysis.added_bal * (1 + noise())).toFixed(3);
-  const re = +(rf - analysis.init_bal).toFixed(3);
+  const rb_exp = +(rf - analysis.init_bal).toFixed(3);
+  const rb_anal = +analysis.added_bal.toFixed(3);
+
+  // Support A (calculated by static equilibrium: Total Load - Support B)
+  // Assuming analysis provides total vertical load or beam self-weight + added W
+  const totalLoad = (analysis.total_load !== undefined) ? analysis.total_load : (W + (analysis.self_weight || 4));
+  const ra_anal = +(totalLoad - rb_anal).toFixed(3);
+  const ra_exp = +(totalLoad - rb_exp).toFixed(3);
+
+  // Percentage errors for both supports
+  const erB = Math.abs((rb_anal - rb_exp) / rb_anal) * PERCENT;
+  const erA = Math.abs((ra_anal - ra_exp) / ra_anal) * PERCENT;
+  const meanError = +((erA + erB) / 2).toFixed(2);
+
   return {
     W,
     x,
-    ri: +analysis.init_bal.toFixed(3),
-    rf,
-    re,
-    ra: +analysis.added_bal.toFixed(3),
-    er: Math.abs((analysis.added_bal - re) / analysis.added_bal) * PERCENT,
+    ra_exp,
+    ra_anal,
+    rb_exp,
+    rb_anal,
+    er: meanError,
   };
 }

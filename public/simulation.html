@@ -28,8 +28,20 @@
 <section class="glass"><h2 id="ctitle">Simulation: simple beam</h2>
 <div class="cw"><canvas id="cv" width="900" height="330"></canvas><div id="alert" role="alert">Structural failure</div></div>
 <p class="muted">Drag the blue handle along the beam to choose where the next weight goes. On the compound beam you can also drag the middle support (roller B); moving it restarts the experiment.</p></section>
+#change for reaction at A and B
 <section class="glass"><h2>Observation table</h2><div class="tw"><table>
-<thead><tr><th>S.No</th><th>Load W (N)</th><th>x (m)</th><th>R_initial (N)</th><th>R_final (N)</th><th>R_exp (N)</th><th>R_analytical (N)</th><th>Error (%)</th></tr></thead>
+<thead>
+  <tr>
+    <th>S.No</th>
+    <th>Load W (N)</th>
+    <th>x (m)</th>
+    <th>R_A exp (N)</th>
+    <th>R_A anal (N)</th>
+    <th>R_B exp (N)</th>
+    <th>R_B anal (N)</th>
+    <th>Error (%)</th>
+  </tr>
+</thead>
 <tbody id="tb"></tbody></table></div></section>
 <section class="glass" id="concl"><h2>Conclusion</h2><div id="ctext"></div>
 <p class="muted"><b>Theory:</b> A body is in static equilibrium when ΣF = 0 and ΣM = 0. Small percentage errors come from experimental factors such as balance resolution, support friction and measurement of x, but the analytical values confirm the moment law of equilibrium.</p></section>
