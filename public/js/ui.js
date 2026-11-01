@@ -110,7 +110,12 @@ function acceptAnalysis(analysis) {
 
 function renderTable() {
   $('tb').innerHTML = state.rows.length
-    ? state.rows.map((r, i) => `<tr><td>${i + 1}</td><td>${r.W.toFixed(2)}</td><td>${r.x.toFixed(2)}</td><td>${r.ri.toFixed(3)}</td><td>${r.rf.toFixed(3)}</td><td>${r.re.toFixed(3)}</td><td>${r.ra.toFixed(3)}</td><td>${r.er.toFixed(2)}</td></tr>`).join('')
+    ? state.rows.map((r, i) => {
+      const cells = r.ra_exp !== undefined
+        ? `<td>${r.ra_exp.toFixed(3)}</td><td>${r.ra_anal.toFixed(3)}</td><td>${r.rb_exp.toFixed(3)}</td><td>${r.rb_anal.toFixed(3)}</td>`
+        : `<td>${r.ri.toFixed(3)}</td><td>${r.rf.toFixed(3)}</td><td>${r.re.toFixed(3)}</td><td>${r.ra.toFixed(3)}</td>`;
+      return `<tr><td>${i + 1}</td><td>${r.W.toFixed(2)}</td><td>${r.x.toFixed(2)}</td>${cells}<td>${r.er.toFixed(2)}</td></tr>`;
+    }).join('')
     : '<tr><td colspan="8" class="muted" style="text-align:center">No readings yet. Add a weight to begin.</td></tr>';
 }
 
@@ -121,7 +126,9 @@ function renderConclusion() {
     const n = rows.length;
     const mean = rows.reduce((sum, r) => sum + r.er, 0) / n;
     const last = rows[n - 1];
-    const residual = last.re - last.ra;
+    const residual = (last.rb_exp !== undefined && last.rb_anal !== undefined)
+      ? (last.rb_exp - last.rb_anal)
+      : (last.re - last.ra);
     const ok = mean < MEAN_ERROR_LIMIT;
     const total = A.self_w + loads.reduce((sum, v) => sum + v.W, 0) - (broken ? failInfo.W : 0);
     html = `<p>Over ${n} reading${n > 1 ? 's' : ''}, the mean percentage error is <b>${mean.toFixed(2)}%</b>. For the latest reading the force residual is ΣF<sub>y</sub> = ${residual.toFixed(3)} N and the moment residual about the left support is ΣM = ${(residual * A.xb).toFixed(3)} N·m (total load with self-weight: ${total.toFixed(2)} N).</p>
@@ -174,8 +181,18 @@ export async function addLoad({ noise = randomNoise } = {}) {
   msg();
   state.busy = true;
   const id = ++state.requestId;
+
+  let analysis;
   try {
-    const analysis = await analyze(state.type, state.loads.concat({ W, x }), state.beam);
+    analysis = await analyze(state.type, state.loads.concat({ W, x }), state.beam);
+  } catch (e) {
+    if (id !== state.requestId) return;
+    msg(errorText(e));
+    state.busy = false;
+    return;
+  }
+
+  try {
     if (id !== state.requestId) return; // superseded by a Reset or beam-type change: drop the stale result
     state.loads.push({ W, x });
     acceptAnalysis(analysis);
@@ -185,11 +202,13 @@ export async function addLoad({ noise = randomNoise } = {}) {
     }
     const row = buildRow(analysis, W, x, noise);
     state.rows.push(row);
-    state.reading = row.rf;
+    state.reading = row.rf !== undefined ? row.rf : +(analysis.init_bal + row.rb_exp).toFixed(3);
     refresh();
   } catch (e) {
-    if (id !== state.requestId) return;
-    msg(errorText(e));
+    console.error(e);
+    if (id === state.requestId) {
+      msg('Application error while updating simulation. See console for details.');
+    }
   } finally {
     if (id === state.requestId) state.busy = false;
   }
@@ -203,15 +222,26 @@ export async function resetExperiment() {
   $('alert').style.display = 'none';
   msg();
   $('sbar').style.width = '0';
+
+  let analysis;
   try {
-    const analysis = await analyze(state.type, [], state.beam);
-    if (id !== state.requestId) return; // a newer request owns the screen now
-    acceptAnalysis(analysis);
-    refresh();
+    analysis = await analyze(state.type, [], state.beam);
   } catch (e) {
     if (id !== state.requestId) return;
     msg(errorText(e));
     draw();
+    return;
+  }
+
+  try {
+    if (id !== state.requestId) return; // a newer request owns the screen now
+    acceptAnalysis(analysis);
+    refresh();
+  } catch (e) {
+    console.error(e);
+    if (id === state.requestId) {
+      msg('Application error while updating simulation. See console for details.');
+    }
   }
 }
 
