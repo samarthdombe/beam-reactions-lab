@@ -16,7 +16,9 @@ export function msg(text) {
 
 /** A 400 carries the server's own explanation; anything else means the backend is not reachable. */
 function errorText(error) {
-  return error instanceof ApiError && error.status === 400 ? error.message : BACKEND_MESSAGE;
+  if (error instanceof ApiError && error.status === 400) return error.message;
+  console.error(`API request failed on ${window.location.origin}:`, error);
+  return BACKEND_MESSAGE;
 }
 
 // ---- config consumer: physics constants from the server response ----
