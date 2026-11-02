@@ -36,7 +36,7 @@ what is verified and what is open, read [HANDOFF.md](HANDOFF.md) first.
 ## 3. Commands
 | Purpose | Command |
 |---|---|
-| Dev server | `python3 scripts/run_local.py` (Windows: `py scripts\run_local.py`) -> http://localhost:8040 |
+| Dev server | `python3 scripts/run_local.py` (Windows: `py scripts\run_local.py`) -> http://localhost:8040 (dual-stack, retries next 5 ports if busy; override with `PORT`) |
 | All checks, any OS | `python3 scripts/run_tests.py` (Windows: `py scripts\run_tests.py`); expect 51 tests OK + JS check |
 | Unit tests only (CI) | `python -m unittest discover -s tests` from the repo root |
 | Real exception behind a 500 | `python -c "from beamlab import service; print(service.handle({...}))"` |
@@ -84,5 +84,6 @@ what is verified and what is open, read [HANDOFF.md](HANDOFF.md) first.
 - `_validate_beam` must set every default before conditionally overwriting; a missing one raises
   `UnboundLocalError`, which `process()` hides as a 500.
 - `test_entrypoints` starts local HTTP servers, so it needs loopback socket access.
-- Opening `simulation.html` via `file://` or a different static server shows "Python backend not
-  reachable": only `run_local.py`, `vercel dev` or a deployment answers `POST /api/analyze`.
+- Opening `simulation.html` via `file://` shows a warning message directing the user to the server;
+  opening via a different static server shows "Python backend not reachable": only `run_local.py`,
+  `vercel dev` or a deployment answers `POST /api/analyze`.

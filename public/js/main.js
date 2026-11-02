@@ -7,17 +7,23 @@ import {
 
 const $ = (id) => document.getElementById(id);
 
-$('add').onclick = () => addLoad();
-$('reset').onclick = () => resetExperiment();
-$('pdf').onclick = () => exportPdf(msg);
-$('type').onchange = (e) => changeBeamType(e.target.value);
-$('unit').onchange = (e) => changeUnit(e.target.value);
-$('beamL').onchange = () => changeBeam();
-$('beamSW').onchange = () => changeBeam();
-$('X').addEventListener('input', syncHandleFromInput);
-['W', 'X'].forEach((id) => $(id).addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') addLoad();
-}));
+// Guard: opening simulation.html directly via file:// will never reach the Python backend.
+if (window.location.protocol === 'file:') {
+  msg('You opened this page as a local file. Start the server with '
+    + '"python scripts/run_local.py" and open http://localhost:8040/simulation.html instead.');
+} else {
+  $('add').onclick = () => addLoad();
+  $('reset').onclick = () => resetExperiment();
+  $('pdf').onclick = () => exportPdf(msg);
+  $('type').onchange = (e) => changeBeamType(e.target.value);
+  $('unit').onchange = (e) => changeUnit(e.target.value);
+  $('beamL').onchange = () => changeBeam();
+  $('beamSW').onchange = () => changeBeam();
+  $('X').addEventListener('input', syncHandleFromInput);
+  ['W', 'X'].forEach((id) => $(id).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') addLoad();
+  }));
 
-initHandle();
-resetExperiment();
+  initHandle();
+  resetExperiment();
+}

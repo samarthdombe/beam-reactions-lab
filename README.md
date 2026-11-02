@@ -28,8 +28,9 @@ py scripts\run_local.py           # Windows (or: python scripts\run_local.py)
 ```
 
 Open <http://localhost:8040>. Press `Control+C` to stop. The script serves `public/` and answers
-`POST /api/analyze`. Opening the HTML files directly (`file://`) or through another static server
-shows "Python backend not reachable", because nothing answers the API there.
+`POST /api/analyze` over a dual-stack (IPv6+IPv4) socket. If the port is busy or reserved, it
+automatically tries the next 5 ports, or you can override it with `PORT=8050 python3 scripts/run_local.py`.
+Opening `simulation.html` directly (`file://`) shows an in-page warning directing you to run the server.
 
 ### Vercel
 
